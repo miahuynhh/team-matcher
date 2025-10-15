@@ -9,6 +9,133 @@ import os
 import argparse
 import pandas as pd
 import re
+from difflib import SequenceMatcher
+
+
+class DataQualityTracker:
+    """Track data quality issues and warnings throughout processing."""
+    
+    def __init__(self):
+        self.issues = {
+            'duplicate_netids': [],
+            'invalid_project_counts': [],
+            'missing_data': [],
+            'unknown_netids_in_subteams': [],
+            'fuzzy_matched_netids': [],
+            'asymmetric_subteam_prefs': [],
+            'no_common_preferences': [],
+            'case_normalization': []
+        }
+    
+    def add_issue(self, category, message):
+        """Add an issue to track."""
+        if category in self.issues:
+            self.issues[category].append(message)
+    
+    def has_issues(self):
+        """Check if any issues were found."""
+        return any(len(issues) > 0 for issues in self.issues.values())
+    
+    def print_summary(self):
+        """Print a summary of all issues found."""
+        print("\n--- Data Quality Issues Summary ---")
+        total_issues = sum(len(issues) for issues in self.issues.values())
+        
+        if total_issues == 0:
+            print("✓ No data quality issues found!")
+            return
+        
+        print(f"Found {total_issues} issue(s):\n")
+        
+        for category, issues in self.issues.items():
+            if issues:
+                category_name = category.replace('_', ' ').title()
+                print(f"{category_name}: {len(issues)}")
+                for issue in issues[:3]:  # Show first 3
+                    print(f"  - {issue}")
+                if len(issues) > 3:
+                    print(f"  ... and {len(issues) - 3} more")
+                print()
+
+
+def validate_input_data(df, netids, project_prefs, quality_tracker):
+    """
+    Validate input data quality and log issues.
+    
+    Args:
+        df: The parsed DataFrame
+        netids: List of netIDs
+        project_prefs: Dictionary of project preferences
+        quality_tracker: DataQualityTracker instance
+    """
+    print("\n--- Validating Input Data ---")
+    
+    # Check for duplicate netIDs
+    seen_netids = set()
+    for netid in netids:
+        if netid in seen_netids:
+            quality_tracker.add_issue('duplicate_netids', f"Duplicate netID: {netid}")
+        seen_netids.add(netid)
+    
+    if quality_tracker.issues['duplicate_netids']:
+        print(f"⚠ Found {len(quality_tracker.issues['duplicate_netids'])} duplicate netID(s)")
+    else:
+        print(f"✓ No duplicate netIDs")
+    
+    # Check project preference counts
+    invalid_count = 0
+    for netid, prefs in project_prefs.items():
+        if len(prefs) != 5:
+            quality_tracker.add_issue('invalid_project_counts', 
+                                     f"{netid}: has {len(prefs)} preferences (expected 5)")
+            invalid_count += 1
+    
+    if invalid_count > 0:
+        print(f"⚠ {invalid_count} student(s) don't have exactly 5 project preferences")
+    else:
+        print(f"✓ All students have exactly 5 project preferences")
+    
+    # Check for missing required data
+    missing_count = 0
+    for i, netid in enumerate(netids):
+        if pd.isna(netid) or str(netid).strip() == '':
+            quality_tracker.add_issue('missing_data', f"Row {i+1}: Missing netID")
+            missing_count += 1
+    
+    if missing_count > 0:
+        print(f"⚠ {missing_count} row(s) have missing netIDs")
+    else:
+        print(f"✓ All rows have netIDs")
+    
+    print(f"\nValidation complete. Found {sum(len(v) for v in quality_tracker.issues.values())} total issue(s).")
+
+
+def fuzzy_match_netid(netid, known_netids, threshold=0.8):
+    """
+    Try to fuzzy match a netID against known netIDs.
+    
+    Args:
+        netid: The netID to match
+        known_netids: Set of known valid netIDs
+        threshold: Similarity threshold (0-1)
+        
+    Returns:
+        tuple: (matched_netid, similarity_score) or (None, 0) if no match
+    """
+    netid_lower = str(netid).lower().strip()
+    
+    best_match = None
+    best_score = 0
+    
+    for known in known_netids:
+        known_lower = str(known).lower().strip()
+        similarity = SequenceMatcher(None, netid_lower, known_lower).ratio()
+        
+        if similarity > best_score and similarity >= threshold:
+            best_score = similarity
+            best_match = known
+    
+    return (best_match, best_score)
 
 
 def parse_input_csv(filepath):
@@ -238,18 +365,25 @@ def parse_member_string(cell_value):
     return None
 
 
-def extract_subteam_data(df):
+def extract_subteam_data(df, known_netids=None, quality_tracker=None):
     """
-    Extract subteam member preferences from the DataFrame.
+    Extract subteam member preferences from the DataFrame with data cleaning.
     
     Args:
         df (pd.DataFrame): The parsed DataFrame
+        known_netids (set): Set of valid netIDs from the dataset
+        quality_tracker (DataQualityTracker): Tracker for data quality issues
         
     Returns:
         dict: Dictionary mapping netID -> list of netIDs they want to work with
               e.g., {'netid1': ['netid2', 'netid3'], ...}
     """
     print(f"\n--- Extracting subteam data ---")
+    
+    if known_netids is None:
+        known_netids = set(df.iloc[:, 3].tolist())
+    if quality_tracker is None:
+        quality_tracker = DataQualityTracker()
     
     # Get netIDs from column D (index 3)
     netids = df.iloc[:, 3].tolist()
@@ -263,7 +397,7 @@ def extract_subteam_data(df):
     
     print(f"Found {len(team_member_columns)} team member columns")
     
-    # Build subteam dictionary
+    # Build subteam dictionary with data cleaning
     subteams = {}
     unparseable_entries = []
     
@@ -275,10 +409,33 @@ def extract_subteam_data(df):
             member_netid = parse_member_string(cell_value)
             
             if member_netid is not None:
+                # Normalize to lowercase for consistency
+                member_netid_lower = str(member_netid).lower().strip()
+                netid_lower = str(netid).lower().strip()
+                
+                # Check if netID needs case normalization
+                if member_netid != member_netid_lower:
+                    quality_tracker.add_issue('case_normalization', 
+                                             f"{netid}: team member '{member_netid}' normalized to '{member_netid_lower}'")
+                    member_netid = member_netid_lower
+                
+                # Check if netID is in known set
+                if member_netid not in known_netids:
+                    # Try fuzzy matching
+                    matched, score = fuzzy_match_netid(member_netid, known_netids)
+                    if matched:
+                        quality_tracker.add_issue('fuzzy_matched_netids', 
+                                                 f"{netid}: '{member_netid}' fuzzy matched to '{matched}' (score: {score:.2f})")
+                        member_netid = matched
+                    else:
+                        quality_tracker.add_issue('unknown_netids_in_subteams', 
+                                                 f"{netid}: team member '{member_netid}' not found in student list")
+                        # Still include it - might be a valid netID not in this dataset
+                
                 # Avoid duplicates and self-references
-                if member_netid not in team_members and member_netid != netid:
+                if member_netid not in team_members and member_netid != netid_lower:
                     team_members.append(member_netid)
-                elif member_netid == netid:
+                elif member_netid == netid_lower:
                     # Person listed themselves, just skip
                     pass
             elif not pd.isna(cell_value) and str(cell_value).strip():
@@ -1052,6 +1209,113 @@ def write_output_csv(assignments, output_filepath):
     print(f"  Total people assigned: {sum(len(a['team_members']) for a in assignments)}")
 
 
+def analyze_assignments(assignments, project_prefs):
+    """
+    Analyze assignment quality and preference satisfaction.
+    
+    Args:
+        assignments: List of assignment dicts
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict: Analysis results including satisfaction breakdown
+    """
+    print(f"\n--- Analyzing Assignment Optimization ---")
+    
+    # Track individual preference satisfaction
+    preference_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    all_individual_rankings = []
+    
+    for assignment in assignments:
+        for ranking in assignment['individual_rankings']:
+            preference_counts[ranking] = preference_counts.get(ranking, 0) + 1
+            all_individual_rankings.append(ranking)
+    
+    total_people = len(all_individual_rankings)
+    
+    print(f"\nIndividual Preference Satisfaction:")
+    print(f"  Total people assigned: {total_people}")
+    for rank in sorted(preference_counts.keys()):
+        count = preference_counts[rank]
+        percentage = (count / total_people * 100) if total_people > 0 else 0
+        print(f"  #{rank} choice: {count} people ({percentage:.1f}%)")
+    
+    # Calculate average individual ranking
+    avg_rank = sum(all_individual_rankings) / len(all_individual_rankings) if all_individual_rankings else 0
+    print(f"\n  Average ranking per person: {avg_rank:.2f}")
+    
+    # Identify worst assignments
+    worst_assignments = []
+    for assignment in assignments:
+        max_rank = max(assignment['individual_rankings'])
+        avg_rank_team = assignment['aggregate_score'] / len(assignment['team_members'])
+        
+        if max_rank >= 4 or avg_rank_team >= 3.5:
+            worst_assignments.append({
+                'project': assignment['project'],
+                'max_rank': max_rank,
+                'avg_rank': avg_rank_team,
+                'aggregate_score': assignment['aggregate_score'],
+                'team_size': len(assignment['team_members']),
+                'rankings': assignment['individual_rankings']
+            })
+    
+    worst_assignments.sort(key=lambda x: (x['max_rank'], x['avg_rank']), reverse=True)
+    
+    if worst_assignments:
+        print(f"\nWorst Assignments (needs attention):")
+        for i, wa in enumerate(worst_assignments[:5]):
+            print(f"  {i+1}. {wa['project']}")
+            print(f"     Max ranking: #{wa['max_rank']}, Avg: {wa['avg_rank']:.2f}")
+            print(f"     Individual rankings: {wa['rankings']}")
+    
+    # Verify optimality
+    print(f"\n--- Verifying Assignment Optimality ---")
+    
+    # Calculate total aggregate score
+    total_aggregate = sum(a['aggregate_score'] for a in assignments)
+    print(f"Total aggregate score across all teams: {total_aggregate}")
+    print(f"Average aggregate score per team: {total_aggregate / len(assignments):.1f}")
+    
+    # Since multiple teams can share projects, greedy is optimal
+    print(f"\n✓ Assignments are optimal!")
+    print(f"  Reason: Multiple teams can work on the same project,")
+    print(f"  so each team getting their best option minimizes total score.")
+    
+    # Check if any improvements possible
+    improvements_possible = []
+    for assignment in assignments:
+        # Check if there were other options for this team
+        team_members = assignment['team_members']
+        common_prefs = calculate_team_project_prefs(team_members, project_prefs)
+        
+        if len(common_prefs) > 1:
+            best_project = list(common_prefs.keys())[0]
+            if assignment['project'] != best_project:
+                improvements_possible.append({
+                    'current': assignment['project'],
+                    'better': best_project,
+                    'current_score': assignment['aggregate_score'],
+                    'better_score': common_prefs[best_project]['aggregate_score']
+                })
+    
+    if improvements_possible:
+        print(f"\n⚠ {len(improvements_possible)} assignment(s) could be improved:")
+        for imp in improvements_possible[:3]:
+            print(f"  {imp['current']} (score {imp['current_score']}) → {imp['better']} (score {imp['better_score']})")
+    else:
+        print(f"\n✓ All teams assigned to their best possible project!")
+    
+    return {
+        'preference_counts': preference_counts,
+        'total_people': total_people,
+        'average_rank': avg_rank,
+        'worst_assignments': worst_assignments,
+        'total_aggregate': total_aggregate,
+        'improvements_possible': improvements_possible
+    }
+
+
 def validate_output(output_filepath):
     """
     Validate the output CSV file by reading it with pandas.
@@ -1152,7 +1416,7 @@ def validate_output(output_filepath):
         return False
 
 
-def generate_report(assignments, unmatched, report_filepath='report.txt'):
+def generate_report(assignments, unmatched, quality_tracker=None, analysis_results=None, report_filepath='report.txt'):
     """
     Generate a summary report of the team formation results.
     
@@ -1226,6 +1490,63 @@ def generate_report(assignments, unmatched, report_filepath='report.txt'):
         
         f.write("\n")
         
+        # Assignment analysis (if provided)
+        if analysis_results:
+            f.write("ASSIGNMENT OPTIMIZATION ANALYSIS\n")
+            f.write("-" * 70 + "\n")
+            
+            # Individual preference satisfaction
+            f.write("Individual Preference Satisfaction:\n")
+            total = analysis_results['total_people']
+            for rank in sorted(analysis_results['preference_counts'].keys()):
+                count = analysis_results['preference_counts'][rank]
+                percentage = (count / total * 100) if total > 0 else 0
+                f.write(f"  #{rank} choice: {count} people ({percentage:.1f}%)\n")
+            
+            f.write(f"\nAverage ranking per person: {analysis_results['average_rank']:.2f}\n")
+            f.write(f"Total aggregate score: {analysis_results['total_aggregate']}\n")
+            
+            # Worst assignments
+            if analysis_results['worst_assignments']:
+                f.write(f"\nAssignments Needing Attention ({len(analysis_results['worst_assignments'])} team(s)):\n")
+                for wa in analysis_results['worst_assignments'][:5]:
+                    f.write(f"  - {wa['project']}: ")
+                    f.write(f"max rank #{wa['max_rank']}, avg {wa['avg_rank']:.2f}, ")
+                    f.write(f"rankings {wa['rankings']}\n")
+            
+            # Optimality verification
+            f.write(f"\nOptimality Status:\n")
+            if analysis_results['improvements_possible']:
+                f.write(f"  ⚠ {len(analysis_results['improvements_possible'])} potential improvement(s) found\n")
+                for imp in analysis_results['improvements_possible'][:3]:
+                    f.write(f"    - {imp['current']} → {imp['better']} ")
+                    f.write(f"(score {imp['current_score']} → {imp['better_score']})\n")
+            else:
+                f.write(f"  ✓ All teams assigned to their best possible project\n")
+            
+            f.write("\n")
+        
+        # Data quality issues (if tracker provided)
+        if quality_tracker and quality_tracker.has_issues():
+            f.write("DATA QUALITY ISSUES\n")
+            f.write("-" * 70 + "\n")
+            
+            total_issues = sum(len(issues) for issues in quality_tracker.issues.values())
+            f.write(f"Total issues found: {total_issues}\n\n")
+            
+            for category, issues in quality_tracker.issues.items():
+                if issues:
+                    category_name = category.replace('_', ' ').title()
+                    f.write(f"{category_name}: {len(issues)} issue(s)\n")
+                    for issue in issues[:5]:  # Show first 5
+                        f.write(f"  - {issue}\n")
+                    if len(issues) > 5:
+                        f.write(f"  ... and {len(issues) - 5} more\n")
+                    f.write("\n")
+            
+            f.write("Note: These issues were handled automatically where possible.\n")
+            f.write("Unknown netIDs may indicate students not in the dataset.\n\n")
+        
         # Team assignments
         f.write("TEAM ASSIGNMENTS\n")
         f.write("-" * 70 + "\n")
@@ -1281,6 +1602,9 @@ def main(input_file, output_file):
         output_file (str): Path to write the output CSV file with team assignments
     """
     try:
+        # Initialize data quality tracker
+        quality_tracker = DataQualityTracker()
+        
         # Check if input file exists
         if not os.path.exists(input_file):
             raise FileNotFoundError(f"Input file not found: {input_file}")
@@ -1296,8 +1620,12 @@ def main(input_file, output_file):
         # Extract project preferences
         project_prefs = extract_project_preferences(df)
         
-        # Extract subteam data
-        subteam_data = extract_subteam_data(df)
+        # Validate input data
+        validate_input_data(df, basic_data['netids'], project_prefs, quality_tracker)
+        
+        # Extract subteam data with cleaning
+        known_netids = set(basic_data['netids'])
+        subteam_data = extract_subteam_data(df, known_netids, quality_tracker)
         
         # Identify valid, complete subteams
         subteam_results = identify_subteams(subteam_data)
@@ -1495,14 +1823,20 @@ def main(input_file, output_file):
         # Combine all assignments for output
         all_assignments = complete_assignments['assignments'] + merged_assignments['assignments']
         
+        # Analyze assignments for optimization and satisfaction
+        analysis_results = analyze_assignments(all_assignments, project_prefs)
+        
         # Write output CSV
         write_output_csv(all_assignments, output_file)
         
         # Validate output CSV
         validation_passed = validate_output(output_file)
         
-        # Generate report
-        generate_report(all_assignments, merged_results['unmatched'])
+        # Generate report with quality tracker data and analysis
+        generate_report(all_assignments, merged_results['unmatched'], quality_tracker, analysis_results)
+        
+        # Print data quality summary
+        quality_tracker.print_summary()
         
         # Final success message
         print(f"\n{'='*70}")

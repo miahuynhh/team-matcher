@@ -5,119 +5,173 @@ TEAM FORMATION SUMMARY REPORT
 OVERALL STATISTICS
 ----------------------------------------------------------------------
 Total students: 87
-Students successfully placed: 39 (44.8%)
-Students unmatched: 48 (55.2%)
-Total teams formed: 7
+Students successfully placed: 66 (75.9%)
+Students unmatched: 21 (24.1%)
+Total teams formed: 12
 
 PREFERENCE SATISFACTION DISTRIBUTION
 ----------------------------------------------------------------------
-  Perfect (all #1): 3 team(s)
+  Perfect (all #1): 7 team(s)
   Good (avg 2.0-3.0 per person): 3 team(s)
-  Poor (avg 4.0+ per person): 1 team(s)
+  Poor (avg 4.0+ per person): 2 team(s)
 
-Teams with members who got #4 or #5 choices: 2
+Teams with members who got #4 or #5 choices: 4
   - MealQuest: highest rank = #5
   - TicketSpy: highest rank = #5
+  - Spotify Showdown: highest rank = #5
+  - CrossWars: highest rank = #4
+
+ASSIGNMENT OPTIMIZATION ANALYSIS
+----------------------------------------------------------------------
+Individual Preference Satisfaction:
+  #1 choice: 41 people (62.1%)
+  #2 choice: 8 people (12.1%)
+  #3 choice: 4 people (6.1%)
+  #4 choice: 3 people (4.5%)
+  #5 choice: 10 people (15.2%)
+
+Average ranking per person: 1.98
+Total aggregate score: 131
+
+Assignments Needing Attention (4 team(s)):
+  - Spotify Showdown: max rank #5, avg 4.60, rankings [5, 3, 5, 5, 5]
+  - TicketSpy: max rank #5, avg 4.33, rankings [3, 5, 5, 3, 5, 5]
+  - MealQuest: max rank #5, avg 3.00, rankings [2, 5, 2, 2, 2, 5]
+  - CrossWars: max rank #4, avg 2.50, rankings [4, 4, 4, 1, 1, 1]
+
+Optimality Status:
+  ✓ All teams assigned to their best possible project
+
+DATA QUALITY ISSUES
+----------------------------------------------------------------------
+Total issues found: 21
+
+Unknown Netids In Subteams: 6 issue(s)
+  - lizhao: team member 'mayaoden' not found in student list
+  - junhez: team member 'mayaoden' not found in student list
+  - shelb2: team member 'mayaoden' not found in student list
+  - zliu44: team member 'mayaoden' not found in student list
+  - lberna: team member '2581948' not found in student list
+  ... and 1 more
+
+Fuzzy Matched Netids: 12 issue(s)
+  - shaank22: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+  - smoshe: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+  - aryan08: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+  - dmj65432: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+  - Pfg1995: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+  ... and 7 more
+
+Case Normalization: 3 issue(s)
+  - dchiem: team member 'Adgarg12' normalized to 'adgarg12'
+  - gcarls4: team member 'Jhuynh18' normalized to 'jhuynh18'
+  - imlimasi: team member 'Adgarg12' normalized to 'adgarg12'
+
+Note: These issues were handled automatically where possible.
+Unknown netIDs may indicate students not in the dataset.
 
 TEAM ASSIGNMENTS
 ----------------------------------------------------------------------
 
-Team 1: GoBuddy
+Team 1: Ambira
+  Members (6): donovan8, hgram007, ntsegai2, oconnorr, sluong05, timmh7
+  Aggregate score: 6
+  Individual rankings: [1, 1, 1, 1, 1, 1]
+  Average per person: 1.00
+
+Team 2: CrossWars
+  Members (6): akpettis, dmaddo, fpazaran, gcarls4, jacqub3, jhuynh18
+  Aggregate score: 15
+  Individual rankings: [4, 4, 4, 1, 1, 1]
+  Average per person: 2.50
+
+Team 3: GitStory
+  Members (5): adgarg12, dchiem, imlimasi, sliu1229, vinamra1
+  Aggregate score: 5
+  Individual rankings: [1, 1, 1, 1, 1]
+  Average per person: 1.00
+
+Team 4: GoBuddy
   Members (6): aaryaj, jinkehan, luam, rayxr, sjn0305, tingyu01
   Aggregate score: 6
   Individual rankings: [1, 1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 2: InternTrack
-  Members (5): john35, mas954, mmahamed, shaank22, yasirab
-  Aggregate score: 15
-  Individual rankings: [3, 3, 3, 3, 3]
-  Average per person: 3.00
+Team 5: Homi
+  Members (5): conthi, eelmi2, husabdi, ptang6, zsabry
+  Aggregate score: 5
+  Individual rankings: [1, 1, 1, 1, 1]
+  Average per person: 1.00
 
-Team 3: MealQuest
+Team 6: MatchStudy
+  Members (5): john35, mas954, mmahamed, vishksat, yasirab
+  Aggregate score: 11
+  Individual rankings: [2, 2, 3, 2, 2]
+  Average per person: 2.20
+
+Team 7: MealQuest
   Members (6): alew4, chiemily, jpark132, rpham03, wadswbri, yanam5
   Aggregate score: 18
-  Individual rankings: [2, 2, 5, 2, 5, 2]
+  Individual rankings: [2, 5, 2, 2, 2, 5]
   Average per person: 3.00
 
-Team 4: Pill Pals
-  Members (5): admcrae, avanunes, lillinn, zcrouse, zzzahara
-  Aggregate score: 14
-  Individual rankings: [3, 3, 2, 3, 3]
-  Average per person: 2.80
-
-Team 5: ShelterLink
+Team 8: ShelterLink
   Members (5): amarto, azitab, cbither, elijoshi, spenj
   Aggregate score: 5
   Individual rankings: [1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 6: TicketSpy
+Team 9: Spotify Showdown
+  Members (5): admcrae, avanunes, lillinn, shelb2, zcrouse
+  Aggregate score: 23
+  Individual rankings: [5, 3, 5, 5, 5]
+  Average per person: 4.60
+
+Team 10: TicketSpy
   Members (6): hsu01, lmswar, nbphucc, xllegion, xuannhu, xz265
   Aggregate score: 26
-  Individual rankings: [5, 5, 3, 5, 5, 3]
+  Individual rankings: [3, 5, 5, 3, 5, 5]
   Average per person: 4.33
 
-Team 7: Wearabouts
+Team 11: Wearabouts
   Members (6): ashastry, emilysl, leeaj23, lparab, ninaucht, priyam3
   Aggregate score: 6
   Individual rankings: [1, 1, 1, 1, 1, 1]
   Average per person: 1.00
 
+Team 12: WebAmp
+  Members (5): cyw12, ecjohn80, jc011605, longvu, zzzahara
+  Aggregate score: 5
+  Individual rankings: [1, 1, 1, 1, 1]
+  Average per person: 1.00
+
 ======================================================================
 UNMATCHED STUDENTS
 ======================================================================
-Total unmatched: 48 student(s)
+Total unmatched: 21 student(s)
 
 List of unmatched students:
   1. Pfg1995
   2. abigam8
-  3. adgarg12
-  4. ahanaroy
-  5. akpettis
-  6. aryan08
-  7. ayamouse
-  8. conthi
-  9. cyw12
-  10. dchiem
-  11. dmaddo
-  12. dmaring
-  13. dmj65432
-  14. donovan8
-  15. dpetkau
-  16. ecjohn80
-  17. eelmi2
-  18. erathi
-  19. fpazaran
-  20. gcarls4
-  21. harrycn
-  22. hgram007
-  23. husabdi
-  24. imlimasi
-  25. jacqub3
-  26. jc011605
-  27. jhuynh18
-  28. jtkent
-  29. junhez
-  30. kiann2
-  31. lberna
-  32. lizhao
-  33. longvu
-  34. ntsegai2
-  35. nushas
-  36. oconnorr
-  37. ptang6
-  38. shelb2
-  39. sliu1229
-  40. sluong05
-  41. smoshe
-  42. timmh7
-  43. timofeik
-  44. tomaszmi
-  45. vinamra1
-  46. vishksat
-  47. zliu44
-  48. zsabry
+  3. ahanaroy
+  4. aryan08
+  5. ayamouse
+  6. dmaring
+  7. dmj65432
+  8. dpetkau
+  9. erathi
+  10. harrycn
+  11. jtkent
+  12. junhez
+  13. kiann2
+  14. lberna
+  15. lizhao
+  16. nushas
+  17. shaank22
+  18. smoshe
+  19. timofeik
+  20. tomaszmi
+  21. zliu44
 
 Note: These students could not be placed in teams of 5-6 with
 compatible project preferences (projects in everyone's top 5).
