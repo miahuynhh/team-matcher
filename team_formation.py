@@ -319,6 +319,168 @@ def extract_subteam_data(df):
     return subteams
 
 
+def validate_subteam(members, subteam_prefs):
+    """
+    Check if a group of netIDs forms a valid subteam.
+    
+    A valid subteam requires that for each member M in the team:
+    - M's preference list contains exactly all other members (not including M themselves)
+    
+    Args:
+        members: Set of netIDs
+        subteam_prefs: Dictionary mapping netID -> list of preferred team members
+        
+    Returns:
+        bool: True if this is a valid subteam
+    """
+    members_set = set(members)
+    
+    for member in members_set:
+        # Get this member's preferences
+        member_prefs = set(subteam_prefs.get(member, []))
+        
+        # Their preferences should be exactly the other members (excluding themselves)
+        expected_prefs = members_set - {member}
+        
+        if member_prefs != expected_prefs:
+            return False
+    
+    return True
+
+
+def identify_subteams(subteam_prefs):
+    """
+    Identify valid, complete subteams from preference data.
+    
+    A subteam is valid when all members mutually list each other.
+    
+    Args:
+        subteam_prefs: Dictionary mapping netID -> list of netIDs they want to work with
+        
+    Returns:
+        dict with keys:
+            - 'complete_subteams': List of sets, each set is a valid subteam
+            - 'individuals': Set of netIDs not in any complete subteam
+    """
+    print(f"\n--- Identifying subteams ---")
+    
+    complete_subteams = []
+    assigned = set()  # Track who's been assigned to a subteam
+    
+    # Sort by size of preference list (larger teams first) to prioritize larger subteams
+    sorted_people = sorted(subteam_prefs.items(), key=lambda x: len(x[1]), reverse=True)
+    
+    for netid, prefs in sorted_people:
+        if netid in assigned:
+            continue
+        
+        if not prefs:
+            # No preferences, will be an individual
+            continue
+        
+        # Form potential subteam: this person + their preferences
+        potential_team = {netid} | set(prefs)
+        
+        # Check if this is a valid subteam
+        if validate_subteam(potential_team, subteam_prefs):
+            # Check if any member is already assigned
+            if not (potential_team & assigned):
+                complete_subteams.append(potential_team)
+                assigned.update(potential_team)
+                print(f"  Found subteam of size {len(potential_team)}: {sorted(potential_team)}")
+    
+    # Everyone else is an individual
+    all_people = set(subteam_prefs.keys())
+    individuals = all_people - assigned
+    
+    print(f"\nSubteam identification results:")
+    print(f"  Complete subteams: {len(complete_subteams)}")
+    print(f"  Individuals: {len(individuals)}")
+    
+    # Size distribution of subteams
+    if complete_subteams:
+        size_dist = {}
+        for team in complete_subteams:
+            size = len(team)
+            size_dist[size] = size_dist.get(size, 0) + 1
+        
+        print(f"\n  Subteam size distribution:")
+        for size in sorted(size_dist.keys()):
+            count = size_dist[size]
+            print(f"    Size {size}: {count} subteam(s)")
+    
+    return {
+        'complete_subteams': complete_subteams,
+        'individuals': individuals
+    }
+
+
+def calculate_team_project_prefs(team_members, project_prefs):
+    """
+    Calculate common project preferences for a team.
+    
+    Finds projects that ALL team members have in their top 5 and calculates
+    aggregate preference scores.
+    
+    Args:
+        team_members: Iterable of netIDs (set, list, etc.)
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict: Dictionary of common projects with aggregate scores, sorted by score
+              {project: {'aggregate_score': score, 'rankings': [r1, r2, ...]}}
+              Empty dict if no common preferences
+    """
+    team_list = list(team_members)
+    
+    if not team_list:
+        return {}
+    
+    # Find projects that are in ALL members' top 5
+    # Start with first member's projects
+    common_projects = set(project_prefs.get(team_list[0], {}).keys())
+    
+    # Intersect with each other member's projects
+    for netid in team_list[1:]:
+        member_projects = set(project_prefs.get(netid, {}).keys())
+        common_projects &= member_projects
+    
+    # Calculate aggregate scores for common projects
+    project_scores = {}
+    for project in common_projects:
+        rankings = []
+        for netid in team_list:
+            ranking = project_prefs[netid][project]
+            rankings.append(ranking)
+        
+        aggregate_score = sum(rankings)
+        project_scores[project] = {
+            'aggregate_score': aggregate_score,
+            'rankings': rankings
+        }
+    
+    # Sort by aggregate score (lower is better)
+    sorted_projects = dict(sorted(project_scores.items(), key=lambda x: x[1]['aggregate_score']))
+    
+    return sorted_projects
+
+
+def calculate_subteam_project_prefs(subteam, project_prefs):
+    """
+    Calculate common project preferences for a subteam.
+    
+    This is a wrapper around calculate_team_project_prefs for consistency.
+    
+    Args:
+        subteam: Set of netIDs
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict: Dictionary of common projects with aggregate scores
+    """
+    return calculate_team_project_prefs(subteam, project_prefs)
+
+
 def main(input_file, output_file):
     """
     Main function for team formation.
@@ -346,6 +508,41 @@ def main(input_file, output_file):
         # Extract subteam data
         subteam_data = extract_subteam_data(df)
         
+        # Identify valid, complete subteams
+        subteam_results = identify_subteams(subteam_data)
+        
+        # Calculate common project preferences for each subteam
+        print(f"\n--- Analyzing Subteam Project Preferences ---")
+        subteam_project_analysis = []
+        subteams_with_no_common = []
+        
+        for i, subteam in enumerate(subteam_results['complete_subteams']):
+            common_prefs = calculate_subteam_project_prefs(subteam, project_prefs)
+            subteam_project_analysis.append({
+                'subteam': subteam,
+                'common_prefs': common_prefs
+            })
+            
+            if not common_prefs:
+                subteams_with_no_common.append((i+1, sorted(subteam)))
+                print(f"\n⚠️  ERROR: Subteam {i+1} has NO common project preferences!")
+                print(f"   Members: {', '.join(sorted(subteam))}")
+            else:
+                print(f"\nSubteam {i+1} ({len(subteam)} members) - Top 3 common projects:")
+                for j, (project, data) in enumerate(list(common_prefs.items())[:3]):
+                    print(f"  {j+1}. {project}")
+                    print(f"     Aggregate score: {data['aggregate_score']}")
+                    print(f"     Individual rankings: {data['rankings']}")
+                if len(common_prefs) > 3:
+                    print(f"  ... and {len(common_prefs) - 3} more common project(s)")
+        
+        # Summary of subteam analysis
+        if subteams_with_no_common:
+            print(f"\n⚠️  WARNING: {len(subteams_with_no_common)} subteam(s) have NO common preferences!")
+            print(f"   This violates the constraint that projects must be in everyone's top 5.")
+        else:
+            print(f"\n✓ All {len(subteam_results['complete_subteams'])} subteams have at least one common project preference")
+        
         # Print examples of extracted preferences
         print(f"\n--- Sample Project Preferences ---")
         sample_netids = list(project_prefs.keys())[:3]
@@ -360,32 +557,40 @@ def main(input_file, output_file):
             else:
                 print(f"  No preferences")
         
-        # Print examples of subteam groupings
-        print(f"\n--- Sample Subteam Groupings ---")
-        # Find some interesting examples with different sizes
-        examples_by_size = {}
-        for netid, members in subteam_data.items():
-            size = len(members)
-            if size not in examples_by_size:
-                examples_by_size[size] = []
-            if len(examples_by_size[size]) < 2:  # Keep up to 2 examples per size
-                examples_by_size[size].append((netid, members))
+        # Print examples of complete subteams
+        print(f"\n--- Complete Subteams (Mutual Matches) ---")
+        if subteam_results['complete_subteams']:
+            # Show first 3 complete subteams as examples
+            for i, team in enumerate(subteam_results['complete_subteams'][:3]):
+                sorted_team = sorted(team)
+                print(f"\nSubteam {i+1} (size {len(team)}):")
+                for member in sorted_team:
+                    print(f"  - {member}")
+            
+            if len(subteam_results['complete_subteams']) > 3:
+                print(f"\n... and {len(subteam_results['complete_subteams']) - 3} more complete subteam(s)")
+        else:
+            print("No complete subteams found")
         
-        for size in sorted(examples_by_size.keys(), reverse=True):
-            if size > 0:  # Skip people with no subteam
-                for netid, members in examples_by_size[size][:1]:  # Show 1 per size
-                    print(f"\n{netid} wants to work with {len(members)} people:")
-                    for member in members:
-                        print(f"  - {member}")
+        # Print examples of individuals
+        if subteam_results['individuals']:
+            print(f"\n--- Individuals (No Complete Subteam Match) ---")
+            individuals_list = sorted(list(subteam_results['individuals']))
+            print(f"First 10 individuals: {', '.join(individuals_list[:10])}")
+            if len(individuals_list) > 10:
+                print(f"... and {len(individuals_list) - 10} more")
         
         # Print summary of parsed data
         print(f"\n--- Summary ---")
         print(f"Total students: {len(basic_data['netids'])}")
         print(f"Students with preferences: {sum(1 for p in project_prefs.values() if p)}")
         print(f"Students with subteam preferences: {sum(1 for s in subteam_data.values() if s)}")
+        print(f"Complete subteams identified: {len(subteam_results['complete_subteams'])}")
+        print(f"Individuals (no complete subteam): {len(subteam_results['individuals'])}")
         print(f"NetIDs successfully extracted from column D")
         print(f"Project preferences successfully extracted")
         print(f"Subteam data successfully extracted")
+        print(f"Subteam validation completed")
         
         # TODO: Process the data and form teams
         # This will include the team formation algorithm
