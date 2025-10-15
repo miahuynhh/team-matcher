@@ -481,6 +481,329 @@ def calculate_subteam_project_prefs(subteam, project_prefs):
     return calculate_team_project_prefs(subteam, project_prefs)
 
 
+def classify_subteams(subteams_data):
+    """
+    Classify subteams based on size for team formation.
+    
+    Teams of size 5-6 can be directly assigned to projects.
+    Teams of size 1-4 need to be merged or supplemented.
+    
+    Args:
+        subteams_data: Dictionary with 'complete_subteams' and 'individuals'
+        
+    Returns:
+        dict with keys:
+            - 'complete_teams': List of teams ready for assignment (size 5-6)
+            - 'incomplete_subteams': Dict organized by size (1-4)
+    """
+    print(f"\n--- Classifying Subteams ---")
+    
+    complete_teams = []
+    incomplete_subteams = {1: [], 2: [], 3: [], 4: []}
+    
+    # Process complete subteams
+    for subteam in subteams_data['complete_subteams']:
+        size = len(subteam)
+        team_obj = {'members': subteam, 'size': size}
+        
+        if size >= 5 and size <= 6:
+            # Can be directly assigned
+            complete_teams.append(team_obj)
+        elif size >= 1 and size <= 4:
+            # Needs merging/supplementing
+            incomplete_subteams[size].append(team_obj)
+        # Note: size > 6 would be an error, but shouldn't happen with our validation
+    
+    # Process individuals (treat as subteams of size 1)
+    for individual in subteams_data['individuals']:
+        team_obj = {'members': {individual}, 'size': 1}
+        incomplete_subteams[1].append(team_obj)
+    
+    # Print classification results
+    print(f"Complete teams (size 5-6): {len(complete_teams)}")
+    people_in_complete = sum(team['size'] for team in complete_teams)
+    print(f"  Total people: {people_in_complete}")
+    
+    print(f"\nIncomplete subteams (need merging):")
+    people_in_incomplete = 0
+    for size in sorted(incomplete_subteams.keys()):
+        count = len(incomplete_subteams[size])
+        if count > 0:
+            people_count = count * size
+            people_in_incomplete += people_count
+            print(f"  Size {size}: {count} subteam(s) ({people_count} people)")
+    
+    print(f"  Total people in incomplete teams: {people_in_incomplete}")
+    
+    return {
+        'complete_teams': complete_teams,
+        'incomplete_subteams': incomplete_subteams
+    }
+
+
+def check_compatibility(subteam1, subteam2, project_prefs):
+    """
+    Check if two subteams can be merged based on project preferences.
+    
+    Returns True if the combined group has at least one project that
+    ALL members have in their top 5.
+    
+    Args:
+        subteam1: Dict with 'members' (set of netIDs)
+        subteam2: Dict with 'members' (set of netIDs)
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        bool: True if compatible (at least one common project)
+    """
+    combined_members = subteam1['members'] | subteam2['members']
+    common_prefs = calculate_team_project_prefs(combined_members, project_prefs)
+    return len(common_prefs) > 0
+
+
+def merge_subteams_into_teams(incomplete_subteams, project_prefs):
+    """
+    Merge smaller subteams into valid teams of 5-6 people.
+    
+    Args:
+        incomplete_subteams: Dict organized by size {1: [...], 2: [...], ...}
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict with keys:
+            - 'formed_teams': List of successfully formed teams
+            - 'unmatched': List of subteams that couldn't be matched
+    """
+    print(f"\n--- Merging Subteams into Teams ---")
+    
+    formed_teams = []
+    used = set()  # Track indices of used subteams by (size, index)
+    
+    # Helper function to check if a subteam is used
+    def is_used(size, idx):
+        return (size, idx) in used
+    
+    # Helper function to mark as used
+    def mark_used(size, idx):
+        used.add((size, idx))
+    
+    # Strategy 1: Size 4 + Size 2 = 6, or Size 4 + Size 1 = 5
+    print("\nMerging size 4 subteams...")
+    for i, team4 in enumerate(incomplete_subteams[4]):
+        if is_used(4, i):
+            continue
+        
+        # Try to add a size 2 subteam
+        found = False
+        for j, team2 in enumerate(incomplete_subteams[2]):
+            if is_used(2, j):
+                continue
+            if check_compatibility(team4, team2, project_prefs):
+                merged = {
+                    'members': team4['members'] | team2['members'],
+                    'source_subteams': [team4, team2],
+                    'size': 6
+                }
+                formed_teams.append(merged)
+                mark_used(4, i)
+                mark_used(2, j)
+                print(f"  Merged size 4 + size 2 → team of 6")
+                found = True
+                break
+        
+        if found:
+            continue
+        
+        # Try to add a size 1 subteam
+        for j, team1 in enumerate(incomplete_subteams[1]):
+            if is_used(1, j):
+                continue
+            if check_compatibility(team4, team1, project_prefs):
+                merged = {
+                    'members': team4['members'] | team1['members'],
+                    'source_subteams': [team4, team1],
+                    'size': 5
+                }
+                formed_teams.append(merged)
+                mark_used(4, i)
+                mark_used(1, j)
+                print(f"  Merged size 4 + size 1 → team of 5")
+                break
+    
+    # Strategy 2: Size 3 + Size 3 = 6, or Size 3 + Size 2 = 5
+    print("\nMerging size 3 subteams...")
+    for i, team3a in enumerate(incomplete_subteams[3]):
+        if is_used(3, i):
+            continue
+        
+        # Try to merge with another size 3
+        found = False
+        for j, team3b in enumerate(incomplete_subteams[3]):
+            if i >= j or is_used(3, j):
+                continue
+            if check_compatibility(team3a, team3b, project_prefs):
+                merged = {
+                    'members': team3a['members'] | team3b['members'],
+                    'source_subteams': [team3a, team3b],
+                    'size': 6
+                }
+                formed_teams.append(merged)
+                mark_used(3, i)
+                mark_used(3, j)
+                print(f"  Merged size 3 + size 3 → team of 6")
+                found = True
+                break
+        
+        if found:
+            continue
+        
+        # Try to merge with size 2
+        for j, team2 in enumerate(incomplete_subteams[2]):
+            if is_used(2, j):
+                continue
+            if check_compatibility(team3a, team2, project_prefs):
+                merged = {
+                    'members': team3a['members'] | team2['members'],
+                    'source_subteams': [team3a, team2],
+                    'size': 5
+                }
+                formed_teams.append(merged)
+                mark_used(3, i)
+                mark_used(2, j)
+                print(f"  Merged size 3 + size 2 → team of 5")
+                break
+    
+    # Strategy 3: Size 2 + Size 2 + Size 2 = 6, or Size 2 + Size 2 + Size 1 = 5
+    print("\nMerging size 2 subteams...")
+    for i, team2a in enumerate(incomplete_subteams[2]):
+        if is_used(2, i):
+            continue
+        
+        # Try to merge with two other size 2 teams
+        found = False
+        for j, team2b in enumerate(incomplete_subteams[2]):
+            if i >= j or is_used(2, j):
+                continue
+            if not check_compatibility(team2a, team2b, project_prefs):
+                continue
+            
+            for k, team2c in enumerate(incomplete_subteams[2]):
+                if j >= k or is_used(2, k):
+                    continue
+                # Check if all three are compatible
+                temp_merge = {'members': team2a['members'] | team2b['members']}
+                if check_compatibility(temp_merge, team2c, project_prefs):
+                    merged = {
+                        'members': team2a['members'] | team2b['members'] | team2c['members'],
+                        'source_subteams': [team2a, team2b, team2c],
+                        'size': 6
+                    }
+                    formed_teams.append(merged)
+                    mark_used(2, i)
+                    mark_used(2, j)
+                    mark_used(2, k)
+                    print(f"  Merged size 2 + size 2 + size 2 → team of 6")
+                    found = True
+                    break
+            if found:
+                break
+        
+        if found:
+            continue
+        
+        # Try size 2 + size 2 + size 1 = 5
+        for j, team2b in enumerate(incomplete_subteams[2]):
+            if i >= j or is_used(2, j):
+                continue
+            if not check_compatibility(team2a, team2b, project_prefs):
+                continue
+            
+            for k, team1 in enumerate(incomplete_subteams[1]):
+                if is_used(1, k):
+                    continue
+                temp_merge = {'members': team2a['members'] | team2b['members']}
+                if check_compatibility(temp_merge, team1, project_prefs):
+                    merged = {
+                        'members': team2a['members'] | team2b['members'] | team1['members'],
+                        'source_subteams': [team2a, team2b, team1],
+                        'size': 5
+                    }
+                    formed_teams.append(merged)
+                    mark_used(2, i)
+                    mark_used(2, j)
+                    mark_used(1, k)
+                    print(f"  Merged size 2 + size 2 + size 1 → team of 5")
+                    found = True
+                    break
+            if found:
+                break
+    
+    # Strategy 4: Group individuals (size 1) into teams of 5-6
+    print("\nGrouping individuals...")
+    available_individuals = [(i, team) for i, team in enumerate(incomplete_subteams[1]) if not is_used(1, i)]
+    
+    while len(available_individuals) >= 5:
+        # Try to find a compatible group of 5-6 individuals
+        for group_size in [6, 5]:
+            if len(available_individuals) < group_size:
+                continue
+            
+            # Try combinations (greedy approach - take first compatible group found)
+            for i in range(len(available_individuals) - group_size + 1):
+                candidate_group = available_individuals[i:i+group_size]
+                
+                # Check if all are compatible
+                combined = {'members': set()}
+                for _, team in candidate_group:
+                    combined['members'] |= team['members']
+                
+                common_prefs = calculate_team_project_prefs(combined['members'], project_prefs)
+                if common_prefs:
+                    # Found a compatible group!
+                    merged = {
+                        'members': combined['members'],
+                        'source_subteams': [team for _, team in candidate_group],
+                        'size': group_size
+                    }
+                    formed_teams.append(merged)
+                    
+                    # Mark all as used
+                    for idx, _ in candidate_group:
+                        mark_used(1, idx)
+                    
+                    print(f"  Grouped {group_size} individuals → team of {group_size}")
+                    
+                    # Update available individuals
+                    available_individuals = [(i, team) for i, team in enumerate(incomplete_subteams[1]) if not is_used(1, i)]
+                    break
+            else:
+                continue
+            break
+        else:
+            # No compatible group found, break out
+            break
+    
+    # Collect unmatched subteams
+    unmatched = []
+    for size in [4, 3, 2, 1]:
+        for i, team in enumerate(incomplete_subteams[size]):
+            if not is_used(size, i):
+                unmatched.append(team)
+    
+    print(f"\nMerging results:")
+    print(f"  Formed teams: {len(formed_teams)}")
+    people_in_formed = sum(team['size'] for team in formed_teams)
+    print(f"  People placed: {people_in_formed}")
+    print(f"  Unmatched subteams: {len(unmatched)}")
+    people_unmatched = sum(team['size'] for team in unmatched)
+    print(f"  People unmatched: {people_unmatched}")
+    
+    return {
+        'formed_teams': formed_teams,
+        'unmatched': unmatched
+    }
+
+
 def main(input_file, output_file):
     """
     Main function for team formation.
@@ -543,6 +866,46 @@ def main(input_file, output_file):
         else:
             print(f"\n✓ All {len(subteam_results['complete_subteams'])} subteams have at least one common project preference")
         
+        # Classify subteams for team formation
+        classified_teams = classify_subteams(subteam_results)
+        
+        # Merge incomplete subteams into valid teams
+        merged_results = merge_subteams_into_teams(classified_teams['incomplete_subteams'], project_prefs)
+        
+        # Print examples of merged teams
+        print(f"\n--- Merged Teams Examples ---")
+        if merged_results['formed_teams']:
+            print(f"\nShowing first 3 merged teams:")
+            for i, team in enumerate(merged_results['formed_teams'][:3]):
+                members_list = sorted(team['members'])
+                print(f"\nMerged Team {i+1} (size {team['size']}):")
+                print(f"  Members: {', '.join(members_list)}")
+                print(f"  Source subteams: {len(team['source_subteams'])} subteam(s) merged")
+                
+                # Show common projects for this merged team
+                common_prefs = calculate_team_project_prefs(team['members'], project_prefs)
+                if common_prefs:
+                    top_projects = list(common_prefs.items())[:3]
+                    print(f"  Common projects:")
+                    for project, data in top_projects:
+                        print(f"    - {project} (score: {data['aggregate_score']})")
+                else:
+                    print(f"  ⚠️  WARNING: No common projects!")
+            
+            if len(merged_results['formed_teams']) > 3:
+                print(f"\n... and {len(merged_results['formed_teams']) - 3} more merged teams")
+        
+        # Show unmatched people if any
+        if merged_results['unmatched']:
+            print(f"\n⚠️  Unmatched Subteams/Individuals:")
+            print(f"  Total unmatched: {len(merged_results['unmatched'])}")
+            unmatched_people = []
+            for team in merged_results['unmatched']:
+                unmatched_people.extend(sorted(team['members']))
+            print(f"  Unmatched people ({len(unmatched_people)}): {', '.join(unmatched_people[:10])}")
+            if len(unmatched_people) > 10:
+                print(f"    ... and {len(unmatched_people) - 10} more")
+        
         # Print examples of extracted preferences
         print(f"\n--- Sample Project Preferences ---")
         sample_netids = list(project_prefs.keys())[:3]
@@ -587,10 +950,26 @@ def main(input_file, output_file):
         print(f"Students with subteam preferences: {sum(1 for s in subteam_data.values() if s)}")
         print(f"Complete subteams identified: {len(subteam_results['complete_subteams'])}")
         print(f"Individuals (no complete subteam): {len(subteam_results['individuals'])}")
-        print(f"NetIDs successfully extracted from column D")
+        print(f"\nTeam Formation Results:")
+        all_formed_teams = classified_teams['complete_teams'] + merged_results['formed_teams']
+        print(f"  Total formed teams: {len(all_formed_teams)}")
+        total_placed = sum(team['size'] for team in all_formed_teams)
+        print(f"    People successfully placed: {total_placed}")
+        print(f"    - Complete subteams (no merge needed): {len(classified_teams['complete_teams'])} teams")
+        print(f"    - Merged teams: {len(merged_results['formed_teams'])} teams")
+        
+        if merged_results['unmatched']:
+            unmatched_count = len(merged_results['unmatched'])
+            unmatched_people_count = sum(team['size'] for team in merged_results['unmatched'])
+            print(f"  Unmatched: {unmatched_count} subteams ({unmatched_people_count} people)")
+        else:
+            print(f"  Unmatched: 0 (all students placed!)")
+        print(f"\nNetIDs successfully extracted from column D")
         print(f"Project preferences successfully extracted")
         print(f"Subteam data successfully extracted")
         print(f"Subteam validation completed")
+        print(f"Team classification completed")
+        print(f"Team merging completed")
         
         # TODO: Process the data and form teams
         # This will include the team formation algorithm
