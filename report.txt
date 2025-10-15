@@ -1,0 +1,127 @@
+======================================================================
+TEAM FORMATION SUMMARY REPORT
+======================================================================
+
+OVERALL STATISTICS
+----------------------------------------------------------------------
+Total students: 87
+Students successfully placed: 39 (44.8%)
+Students unmatched: 48 (55.2%)
+Total teams formed: 7
+
+PREFERENCE SATISFACTION DISTRIBUTION
+----------------------------------------------------------------------
+  Perfect (all #1): 3 team(s)
+  Good (avg 2.0-3.0 per person): 3 team(s)
+  Poor (avg 4.0+ per person): 1 team(s)
+
+Teams with members who got #4 or #5 choices: 2
+  - MealQuest: highest rank = #5
+  - TicketSpy: highest rank = #5
+
+TEAM ASSIGNMENTS
+----------------------------------------------------------------------
+
+Team 1: GoBuddy
+  Members (6): aaryaj, jinkehan, luam, rayxr, sjn0305, tingyu01
+  Aggregate score: 6
+  Individual rankings: [1, 1, 1, 1, 1, 1]
+  Average per person: 1.00
+
+Team 2: InternTrack
+  Members (5): john35, mas954, mmahamed, shaank22, yasirab
+  Aggregate score: 15
+  Individual rankings: [3, 3, 3, 3, 3]
+  Average per person: 3.00
+
+Team 3: MealQuest
+  Members (6): alew4, chiemily, jpark132, rpham03, wadswbri, yanam5
+  Aggregate score: 18
+  Individual rankings: [2, 2, 5, 2, 5, 2]
+  Average per person: 3.00
+
+Team 4: Pill Pals
+  Members (5): admcrae, avanunes, lillinn, zcrouse, zzzahara
+  Aggregate score: 14
+  Individual rankings: [3, 3, 2, 3, 3]
+  Average per person: 2.80
+
+Team 5: ShelterLink
+  Members (5): amarto, azitab, cbither, elijoshi, spenj
+  Aggregate score: 5
+  Individual rankings: [1, 1, 1, 1, 1]
+  Average per person: 1.00
+
+Team 6: TicketSpy
+  Members (6): hsu01, lmswar, nbphucc, xllegion, xuannhu, xz265
+  Aggregate score: 26
+  Individual rankings: [5, 5, 3, 5, 5, 3]
+  Average per person: 4.33
+
+Team 7: Wearabouts
+  Members (6): ashastry, emilysl, leeaj23, lparab, ninaucht, priyam3
+  Aggregate score: 6
+  Individual rankings: [1, 1, 1, 1, 1, 1]
+  Average per person: 1.00
+
+======================================================================
+UNMATCHED STUDENTS
+======================================================================
+Total unmatched: 48 student(s)
+
+List of unmatched students:
+  1. Pfg1995
+  2. abigam8
+  3. adgarg12
+  4. ahanaroy
+  5. akpettis
+  6. aryan08
+  7. ayamouse
+  8. conthi
+  9. cyw12
+  10. dchiem
+  11. dmaddo
+  12. dmaring
+  13. dmj65432
+  14. donovan8
+  15. dpetkau
+  16. ecjohn80
+  17. eelmi2
+  18. erathi
+  19. fpazaran
+  20. gcarls4
+  21. harrycn
+  22. hgram007
+  23. husabdi
+  24. imlimasi
+  25. jacqub3
+  26. jc011605
+  27. jhuynh18
+  28. jtkent
+  29. junhez
+  30. kiann2
+  31. lberna
+  32. lizhao
+  33. longvu
+  34. ntsegai2
+  35. nushas
+  36. oconnorr
+  37. ptang6
+  38. shelb2
+  39. sliu1229
+  40. sluong05
+  41. smoshe
+  42. timmh7
+  43. timofeik
+  44. tomaszmi
+  45. vinamra1
+  46. vishksat
+  47. zliu44
+  48. zsabry
+
+Note: These students could not be placed in teams of 5-6 with
+compatible project preferences (projects in everyone's top 5).
+
+======================================================================
+END OF REPORT
+======================================================================

@@ -1011,6 +1011,267 @@ def assign_projects_to_merged_teams(merged_teams, project_prefs):
     }
 
 
+def write_output_csv(assignments, output_filepath):
+    """
+    Write team assignments to CSV file.
+    
+    Format: project_name, '[member1, member2, member3, ...]'
+    
+    Args:
+        assignments: List of assignment dicts with 'project' and 'team_members'
+        output_filepath: Path to output CSV file
+    """
+    print(f"\n--- Writing Output CSV ---")
+    
+    # Sort assignments by project name for consistent output
+    sorted_assignments = sorted(assignments, key=lambda x: x['project'])
+    
+    # Format for CSV output
+    output_data = []
+    for assignment in sorted_assignments:
+        project_name = assignment['project']
+        # Format members as string representation of list
+        members_str = '[' + ', '.join(assignment['team_members']) + ']'
+        output_data.append({
+            'Project': project_name,
+            'Team Members': members_str
+        })
+    
+    # Write CSV with proper escaping using pandas
+    output_records = []
+    for assignment in sorted_assignments:
+        project_name = assignment['project']
+        members_str = '[' + ', '.join(assignment['team_members']) + ']'
+        output_records.append([project_name, members_str])
+    
+    df_output = pd.DataFrame(output_records)
+    df_output.to_csv(output_filepath, index=False, header=False)
+    
+    print(f"Output written to: {output_filepath}")
+    print(f"  Teams: {len(output_data)}")
+    print(f"  Total people assigned: {sum(len(a['team_members']) for a in assignments)}")
+
+
+def validate_output(output_filepath):
+    """
+    Validate the output CSV file by reading it with pandas.
+    
+    Ensures the file can be properly parsed and has the correct format.
+    
+    Args:
+        output_filepath: Path to the output CSV file
+        
+    Returns:
+        bool: True if validation passes, False otherwise
+    """
+    print(f"\n--- Validating Output CSV ---")
+    
+    try:
+        # Read the CSV with pandas
+        df = pd.read_csv(output_filepath, header=None, names=['Project', 'Team_Members'])
+        
+        print(f"✓ CSV successfully read by pandas")
+        print(f"  Rows: {len(df)}")
+        print(f"  Columns: {len(df.columns)}")
+        
+        # Check that we have exactly 2 columns
+        if len(df.columns) != 2:
+            print(f"✗ ERROR: Expected 2 columns, found {len(df.columns)}")
+            return False
+        
+        print(f"✓ Correct number of columns (2)")
+        
+        # Validate each row
+        validation_errors = []
+        
+        for idx in range(len(df)):
+            row = df.iloc[idx]
+            row_num = idx + 1
+            project = row['Project']
+            members = row['Team_Members']
+            
+            # Check project name is not empty
+            if pd.isna(project) or str(project).strip() == '':
+                validation_errors.append(f"Row {row_num}: Project name is empty")
+                continue
+            
+            # Check members list format
+            members_str = str(members)
+            if not members_str.startswith('[') or not members_str.endswith(']'):
+                validation_errors.append(f"Row {row_num} ({project}): Members list doesn't start with '[' and end with ']'")
+                continue
+            
+            # Try to parse the member list
+            try:
+                # Extract members from the string representation
+                members_content = members_str[1:-1]  # Remove brackets
+                if members_content.strip():  # Not empty
+                    member_list = [m.strip() for m in members_content.split(',')]
+                    
+                    # Check team size (should be 5 or 6)
+                    if len(member_list) < 5 or len(member_list) > 6:
+                        validation_errors.append(f"Row {row_num} ({project}): Team has {len(member_list)} members (expected 5-6)")
+                    
+                    # Check no empty members
+                    if any(not m for m in member_list):
+                        validation_errors.append(f"Row {row_num} ({project}): Contains empty member names")
+                else:
+                    validation_errors.append(f"Row {row_num} ({project}): Empty member list")
+            except Exception as e:
+                validation_errors.append(f"Row {row_num} ({project}): Error parsing members - {e}")
+        
+        if validation_errors:
+            print(f"✗ Validation errors found:")
+            for error in validation_errors[:10]:  # Show first 10 errors
+                print(f"  - {error}")
+            if len(validation_errors) > 10:
+                print(f"  ... and {len(validation_errors) - 10} more errors")
+            return False
+        
+        print(f"✓ All rows properly formatted")
+        print(f"✓ All teams have 5-6 members")
+        print(f"\n✓ Validation PASSED - Output CSV is valid!")
+        
+        # Show a sample row
+        if len(df) > 0:
+            print(f"\nSample row:")
+            sample = df.iloc[0]
+            print(f"  Project: {sample['Project']}")
+            print(f"  Members: {sample['Team_Members']}")
+        
+        return True
+        
+    except FileNotFoundError:
+        print(f"✗ ERROR: Output file not found: {output_filepath}")
+        return False
+    except pd.errors.ParserError as e:
+        print(f"✗ ERROR: Failed to parse CSV file: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ ERROR: Validation failed: {e}")
+        return False
+
+
+def generate_report(assignments, unmatched, report_filepath='report.txt'):
+    """
+    Generate a summary report of the team formation results.
+    
+    Args:
+        assignments: List of all assignment dicts
+        unmatched: List of unmatched subteam dicts
+        report_filepath: Path to output report file
+    """
+    print(f"\n--- Generating Report ---")
+    
+    with open(report_filepath, 'w') as f:
+        f.write("=" * 70 + "\n")
+        f.write("TEAM FORMATION SUMMARY REPORT\n")
+        f.write("=" * 70 + "\n\n")
+        
+        # Overall statistics
+        f.write("OVERALL STATISTICS\n")
+        f.write("-" * 70 + "\n")
+        total_teams = len(assignments)
+        total_placed = sum(len(a['team_members']) for a in assignments)
+        unmatched_count = sum(len(team['members']) for team in unmatched)
+        total_students = total_placed + unmatched_count
+        
+        f.write(f"Total students: {total_students}\n")
+        f.write(f"Students successfully placed: {total_placed} ({total_placed/total_students*100:.1f}%)\n")
+        f.write(f"Students unmatched: {unmatched_count} ({unmatched_count/total_students*100:.1f}%)\n")
+        f.write(f"Total teams formed: {total_teams}\n\n")
+        
+        # Preference satisfaction distribution
+        f.write("PREFERENCE SATISFACTION DISTRIBUTION\n")
+        f.write("-" * 70 + "\n")
+        
+        score_ranges = {
+            'Perfect (all #1)': 0,
+            'Excellent (avg 1.0-2.0 per person)': 0,
+            'Good (avg 2.0-3.0 per person)': 0,
+            'Fair (avg 3.0-4.0 per person)': 0,
+            'Poor (avg 4.0+ per person)': 0
+        }
+        
+        teams_with_low_choices = []
+        
+        for assignment in assignments:
+            score = assignment['aggregate_score']
+            team_size = len(assignment['team_members'])
+            avg_per_person = score / team_size
+            max_rank = max(assignment['individual_rankings'])
+            
+            if score == team_size:  # All #1
+                score_ranges['Perfect (all #1)'] += 1
+            elif avg_per_person <= 2.0:
+                score_ranges['Excellent (avg 1.0-2.0 per person)'] += 1
+            elif avg_per_person <= 3.0:
+                score_ranges['Good (avg 2.0-3.0 per person)'] += 1
+            elif avg_per_person <= 4.0:
+                score_ranges['Fair (avg 3.0-4.0 per person)'] += 1
+            else:
+                score_ranges['Poor (avg 4.0+ per person)'] += 1
+            
+            if max_rank >= 4:
+                teams_with_low_choices.append((assignment['project'], max_rank))
+        
+        for range_name, count in score_ranges.items():
+            if count > 0:
+                f.write(f"  {range_name}: {count} team(s)\n")
+        
+        if teams_with_low_choices:
+            f.write(f"\nTeams with members who got #4 or #5 choices: {len(teams_with_low_choices)}\n")
+            for project, max_rank in teams_with_low_choices:
+                f.write(f"  - {project}: highest rank = #{max_rank}\n")
+        
+        f.write("\n")
+        
+        # Team assignments
+        f.write("TEAM ASSIGNMENTS\n")
+        f.write("-" * 70 + "\n")
+        
+        # Sort by project name
+        sorted_assignments = sorted(assignments, key=lambda x: x['project'])
+        
+        for i, assignment in enumerate(sorted_assignments, 1):
+            f.write(f"\nTeam {i}: {assignment['project']}\n")
+            f.write(f"  Members ({len(assignment['team_members'])}): {', '.join(assignment['team_members'])}\n")
+            f.write(f"  Aggregate score: {assignment['aggregate_score']}\n")
+            f.write(f"  Individual rankings: {assignment['individual_rankings']}\n")
+            
+            # Calculate average
+            avg = assignment['aggregate_score'] / len(assignment['team_members'])
+            f.write(f"  Average per person: {avg:.2f}\n")
+        
+        # Unmatched people
+        if unmatched:
+            f.write("\n" + "=" * 70 + "\n")
+            f.write("UNMATCHED STUDENTS\n")
+            f.write("=" * 70 + "\n")
+            f.write(f"Total unmatched: {unmatched_count} student(s)\n\n")
+            
+            # Extract all unmatched netids
+            unmatched_people = []
+            for team in unmatched:
+                unmatched_people.extend(sorted(team['members']))
+            unmatched_people.sort()
+            
+            f.write("List of unmatched students:\n")
+            for i, netid in enumerate(unmatched_people, 1):
+                f.write(f"  {i}. {netid}\n")
+            
+            f.write("\nNote: These students could not be placed in teams of 5-6 with\n")
+            f.write("compatible project preferences (projects in everyone's top 5).\n")
+        
+        f.write("\n" + "=" * 70 + "\n")
+        f.write("END OF REPORT\n")
+        f.write("=" * 70 + "\n")
+    
+    print(f"Report written to: {report_filepath}")
+    print(f"  Total teams: {total_teams}")
+    print(f"  People placed: {total_placed}/{total_students}")
+
+
 def main(input_file, output_file):
     """
     Main function for team formation.
@@ -1231,14 +1492,41 @@ def main(input_file, output_file):
         print(f"Team merging completed")
         print(f"Project assignment completed for all formed teams")
         
-        # TODO: Process the data and form teams
-        # This will include the team formation algorithm
+        # Combine all assignments for output
+        all_assignments = complete_assignments['assignments'] + merged_assignments['assignments']
         
-        # TODO: Generate output and write to CSV
-        # This will format the results and write to the output file
+        # Write output CSV
+        write_output_csv(all_assignments, output_file)
         
-        print(f"\nTeam assignments will be written to: {output_file}")
-        print("Team formation completed successfully!")
+        # Validate output CSV
+        validation_passed = validate_output(output_file)
+        
+        # Generate report
+        generate_report(all_assignments, merged_results['unmatched'])
+        
+        # Final success message
+        print(f"\n{'='*70}")
+        if validation_passed:
+            print(f"TEAM FORMATION COMPLETED SUCCESSFULLY")
+        else:
+            print(f"TEAM FORMATION COMPLETED WITH VALIDATION WARNINGS")
+        print(f"{'='*70}")
+        print(f"\nSummary:")
+        print(f"  ✓ Output CSV: {output_file}")
+        if validation_passed:
+            print(f"  ✓ CSV validation: PASSED")
+        else:
+            print(f"  ⚠ CSV validation: FAILED (check messages above)")
+        print(f"  ✓ Report: report.txt")
+        print(f"  ✓ Teams formed: {len(all_assignments)}")
+        print(f"  ✓ Students placed: {sum(len(a['team_members']) for a in all_assignments)}/{len(basic_data['netids'])}")
+        
+        if merged_results['unmatched']:
+            unmatched_count = sum(len(team['members']) for team in merged_results['unmatched'])
+            print(f"  ⚠ Students unmatched: {unmatched_count}")
+            print(f"     (See report.txt for details)")
+        
+        print(f"\n{'='*70}")
         
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
