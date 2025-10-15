@@ -804,6 +804,213 @@ def merge_subteams_into_teams(incomplete_subteams, project_prefs):
     }
 
 
+def assign_projects_to_complete_subteams(complete_teams, project_prefs):
+    """
+    Assign projects to 5-6 person complete subteams.
+    
+    For each team, assigns their most preferred common project
+    (the one with the lowest aggregate score).
+    
+    Args:
+        complete_teams: List of complete team dicts with 'members' and 'size'
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict with key 'assignments': List of assignment dicts
+    """
+    print(f"\n--- Assigning Projects to Complete Subteams ---")
+    
+    assignments = []
+    
+    for i, team in enumerate(complete_teams):
+        # Calculate common project preferences for this team
+        common_prefs = calculate_team_project_prefs(team['members'], project_prefs)
+        
+        if not common_prefs:
+            print(f"\n⚠️  ERROR: Team {i+1} has no common project preferences!")
+            print(f"   Members: {', '.join(sorted(team['members']))}")
+            continue
+        
+        # Assign the project with the lowest aggregate score (most preferred)
+        best_project = list(common_prefs.keys())[0]  # Already sorted by score
+        best_score_data = common_prefs[best_project]
+        
+        assignment = {
+            'team_members': sorted(team['members']),
+            'project': best_project,
+            'aggregate_score': best_score_data['aggregate_score'],
+            'individual_rankings': best_score_data['rankings']
+        }
+        assignments.append(assignment)
+        
+        # Calculate max individual ranking to flag poor assignments
+        max_ranking = max(best_score_data['rankings'])
+        warning = ""
+        if max_ranking >= 4:
+            warning = " ⚠️  (some members got #4 or #5 choice)"
+        
+        print(f"\nTeam {i+1} → {best_project}")
+        print(f"  Members: {', '.join(assignment['team_members'])}")
+        print(f"  Aggregate score: {best_score_data['aggregate_score']}")
+        print(f"  Individual rankings: {best_score_data['rankings']}{warning}")
+    
+    # Analyze assignment quality
+    print(f"\n--- Assignment Quality Analysis ---")
+    print(f"Total assignments: {len(assignments)}")
+    
+    # Distribution by aggregate score
+    score_ranges = {
+        'perfect (all #1)': [],
+        'excellent (6-10)': [],
+        'good (11-15)': [],
+        'fair (16-20)': [],
+        'poor (21+)': []
+    }
+    
+    teams_with_low_choices = []
+    
+    for assignment in assignments:
+        score = assignment['aggregate_score']
+        max_rank = max(assignment['individual_rankings'])
+        
+        # Track by score range
+        if score == len(assignment['team_members']):  # All #1 choices
+            score_ranges['perfect (all #1)'].append(assignment)
+        elif score <= 10:
+            score_ranges['excellent (6-10)'].append(assignment)
+        elif score <= 15:
+            score_ranges['good (11-15)'].append(assignment)
+        elif score <= 20:
+            score_ranges['fair (16-20)'].append(assignment)
+        else:
+            score_ranges['poor (21+)'].append(assignment)
+        
+        # Flag teams where someone got #4 or #5
+        if max_rank >= 4:
+            teams_with_low_choices.append((assignment, max_rank))
+    
+    print(f"\nDistribution by aggregate score:")
+    for range_name, teams in score_ranges.items():
+        if teams:
+            print(f"  {range_name}: {len(teams)} team(s)")
+    
+    if teams_with_low_choices:
+        print(f"\n⚠️  Warning: {len(teams_with_low_choices)} team(s) have members with #4 or #5 choices:")
+        for assignment, max_rank in teams_with_low_choices:
+            print(f"  - {assignment['project']}: highest rank = #{max_rank}")
+    else:
+        print(f"\n✓ All teams assigned projects where everyone had it in their top 3!")
+    
+    return {
+        'assignments': assignments
+    }
+
+
+def assign_projects_to_merged_teams(merged_teams, project_prefs):
+    """
+    Assign projects to teams formed by merging smaller subteams.
+    
+    For each merged team, assigns their most preferred common project
+    (the one with the lowest aggregate score).
+    
+    Args:
+        merged_teams: List of merged team dicts with 'members', 'size', and 'source_subteams'
+        project_prefs: Dictionary mapping netID -> {project_name: ranking}
+        
+    Returns:
+        dict with key 'assignments': List of assignment dicts
+    """
+    print(f"\n--- Assigning Projects to Merged Teams ---")
+    
+    assignments = []
+    
+    for i, team in enumerate(merged_teams):
+        # Calculate common project preferences for this team
+        common_prefs = calculate_team_project_prefs(team['members'], project_prefs)
+        
+        if not common_prefs:
+            print(f"\n⚠️  ERROR: Merged Team {i+1} has no common project preferences!")
+            print(f"   Members: {', '.join(sorted(team['members']))}")
+            print(f"   This shouldn't happen - team was formed with compatibility check!")
+            continue
+        
+        # Assign the project with the lowest aggregate score (most preferred)
+        best_project = list(common_prefs.keys())[0]  # Already sorted by score
+        best_score_data = common_prefs[best_project]
+        
+        assignment = {
+            'team_members': sorted(team['members']),
+            'project': best_project,
+            'aggregate_score': best_score_data['aggregate_score'],
+            'individual_rankings': best_score_data['rankings'],
+            'source_subteams_count': len(team['source_subteams'])
+        }
+        assignments.append(assignment)
+        
+        # Calculate max individual ranking to flag poor assignments
+        max_ranking = max(best_score_data['rankings'])
+        warning = ""
+        if max_ranking >= 4:
+            warning = " ⚠️  (some members got #4 or #5 choice)"
+        
+        print(f"\nMerged Team {i+1} → {best_project}")
+        print(f"  Members: {', '.join(assignment['team_members'])}")
+        print(f"  Formed from {assignment['source_subteams_count']} subteam(s)")
+        print(f"  Aggregate score: {best_score_data['aggregate_score']}")
+        print(f"  Individual rankings: {best_score_data['rankings']}{warning}")
+    
+    # Analyze assignment quality
+    print(f"\n--- Merged Teams Assignment Quality ---")
+    print(f"Total assignments: {len(assignments)}")
+    
+    # Distribution by aggregate score
+    score_ranges = {
+        'perfect (all #1)': [],
+        'excellent (6-10)': [],
+        'good (11-15)': [],
+        'fair (16-20)': [],
+        'poor (21+)': []
+    }
+    
+    teams_with_low_choices = []
+    
+    for assignment in assignments:
+        score = assignment['aggregate_score']
+        max_rank = max(assignment['individual_rankings'])
+        
+        # Track by score range
+        if score == len(assignment['team_members']):  # All #1 choices
+            score_ranges['perfect (all #1)'].append(assignment)
+        elif score <= 10:
+            score_ranges['excellent (6-10)'].append(assignment)
+        elif score <= 15:
+            score_ranges['good (11-15)'].append(assignment)
+        elif score <= 20:
+            score_ranges['fair (16-20)'].append(assignment)
+        else:
+            score_ranges['poor (21+)'].append(assignment)
+        
+        # Flag teams where someone got #4 or #5
+        if max_rank >= 4:
+            teams_with_low_choices.append((assignment, max_rank))
+    
+    print(f"\nDistribution by aggregate score:")
+    for range_name, teams in score_ranges.items():
+        if teams:
+            print(f"  {range_name}: {len(teams)} team(s)")
+    
+    if teams_with_low_choices:
+        print(f"\n⚠️  Warning: {len(teams_with_low_choices)} team(s) have members with #4 or #5 choices:")
+        for assignment, max_rank in teams_with_low_choices:
+            print(f"  - {assignment['project']}: highest rank = #{max_rank}")
+    else:
+        print(f"\n✓ All merged teams assigned projects where everyone had it in their top 3!")
+    
+    return {
+        'assignments': assignments
+    }
+
+
 def main(input_file, output_file):
     """
     Main function for team formation.
@@ -871,6 +1078,50 @@ def main(input_file, output_file):
         
         # Merge incomplete subteams into valid teams
         merged_results = merge_subteams_into_teams(classified_teams['incomplete_subteams'], project_prefs)
+        
+        # Assign projects to complete subteams
+        complete_assignments = assign_projects_to_complete_subteams(classified_teams['complete_teams'], project_prefs)
+        
+        # Assign projects to merged teams
+        merged_assignments = assign_projects_to_merged_teams(merged_results['formed_teams'], project_prefs)
+        
+        # Compare complete vs merged team satisfaction
+        print(f"\n--- Satisfaction Comparison: Complete vs Merged Teams ---")
+        
+        if complete_assignments['assignments']:
+            complete_scores = [a['aggregate_score'] for a in complete_assignments['assignments']]
+            avg_complete = sum(complete_scores) / len(complete_scores)
+            complete_avg_per_person = avg_complete / len(complete_assignments['assignments'][0]['team_members']) if complete_assignments['assignments'] else 0
+            print(f"\nComplete Subteams:")
+            print(f"  Teams: {len(complete_assignments['assignments'])}")
+            print(f"  Average aggregate score: {avg_complete:.1f}")
+            print(f"  Average score per person: {complete_avg_per_person:.2f}")
+            
+            complete_perfect = sum(1 for a in complete_assignments['assignments'] if a['aggregate_score'] == len(a['team_members']))
+            print(f"  Perfect assignments (all #1): {complete_perfect}/{len(complete_assignments['assignments'])}")
+        
+        if merged_assignments['assignments']:
+            merged_scores = [a['aggregate_score'] for a in merged_assignments['assignments']]
+            avg_merged = sum(merged_scores) / len(merged_scores)
+            avg_team_size = sum(len(a['team_members']) for a in merged_assignments['assignments']) / len(merged_assignments['assignments'])
+            merged_avg_per_person = avg_merged / avg_team_size
+            print(f"\nMerged Teams:")
+            print(f"  Teams: {len(merged_assignments['assignments'])}")
+            print(f"  Average aggregate score: {avg_merged:.1f}")
+            print(f"  Average score per person: {merged_avg_per_person:.2f}")
+            
+            merged_perfect = sum(1 for a in merged_assignments['assignments'] if a['aggregate_score'] == len(a['team_members']))
+            print(f"  Perfect assignments (all #1): {merged_perfect}/{len(merged_assignments['assignments'])}")
+        
+        # Overall comparison
+        if complete_assignments['assignments'] and merged_assignments['assignments']:
+            print(f"\nComparison:")
+            if complete_avg_per_person < merged_avg_per_person:
+                print(f"  Complete subteams have better satisfaction (lower score per person)")
+            elif complete_avg_per_person > merged_avg_per_person:
+                print(f"  Merged teams have better satisfaction (lower score per person)")
+            else:
+                print(f"  Both have equal satisfaction")
         
         # Print examples of merged teams
         print(f"\n--- Merged Teams Examples ---")
@@ -958,18 +1209,27 @@ def main(input_file, output_file):
         print(f"    - Complete subteams (no merge needed): {len(classified_teams['complete_teams'])} teams")
         print(f"    - Merged teams: {len(merged_results['formed_teams'])} teams")
         
+        print(f"\n  Project Assignments:")
+        print(f"    Complete subteams with projects: {len(complete_assignments['assignments'])}")
+        print(f"    Merged teams with projects: {len(merged_assignments['assignments'])}")
+        total_assigned = len(complete_assignments['assignments']) + len(merged_assignments['assignments'])
+        people_assigned = sum(len(a['team_members']) for a in complete_assignments['assignments']) + sum(len(a['team_members']) for a in merged_assignments['assignments'])
+        print(f"    Total teams with project assignments: {total_assigned}")
+        print(f"    Total people with project assignments: {people_assigned}")
+        
         if merged_results['unmatched']:
             unmatched_count = len(merged_results['unmatched'])
             unmatched_people_count = sum(team['size'] for team in merged_results['unmatched'])
-            print(f"  Unmatched: {unmatched_count} subteams ({unmatched_people_count} people)")
+            print(f"\n  Unmatched: {unmatched_count} subteams ({unmatched_people_count} people)")
         else:
-            print(f"  Unmatched: 0 (all students placed!)")
+            print(f"\n  Unmatched: 0 (all students placed!)")
         print(f"\nNetIDs successfully extracted from column D")
         print(f"Project preferences successfully extracted")
         print(f"Subteam data successfully extracted")
         print(f"Subteam validation completed")
         print(f"Team classification completed")
         print(f"Team merging completed")
+        print(f"Project assignment completed for all formed teams")
         
         # TODO: Process the data and form teams
         # This will include the team formation algorithm
