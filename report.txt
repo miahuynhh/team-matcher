@@ -5,43 +5,39 @@ TEAM FORMATION SUMMARY REPORT
 OVERALL STATISTICS
 ----------------------------------------------------------------------
 Total students: 87
-Students successfully placed: 72 (82.8%)
-Students unmatched: 15 (17.2%)
-Total teams formed: 13
+Students successfully placed: 66 (75.9%)
+Students unmatched: 21 (24.1%)
+Total teams formed: 12
 
 PREFERENCE SATISFACTION DISTRIBUTION
 ----------------------------------------------------------------------
   Perfect (all #1): 7 team(s)
-  Good (avg 2.0-3.0 per person): 2 team(s)
-  Fair (avg 3.0-4.0 per person): 2 team(s)
+  Good (avg 2.0-3.0 per person): 3 team(s)
   Poor (avg 4.0+ per person): 2 team(s)
 
-Teams with members who got #4 or #5 choices: 6
-  - InternTrack: highest rank = #4
+Teams with members who got #4 or #5 choices: 4
   - MealQuest: highest rank = #5
   - TicketSpy: highest rank = #5
-  - Fakeify: highest rank = #4
+  - Spotify Showdown: highest rank = #5
   - CrossWars: highest rank = #4
-  - Align: highest rank = #5
 
 ASSIGNMENT OPTIMIZATION ANALYSIS
 ----------------------------------------------------------------------
 Individual Preference Satisfaction:
-  #1 choice: 41 people (56.9%)
-  #2 choice: 5 people (6.9%)
-  #3 choice: 6 people (8.3%)
-  #4 choice: 11 people (15.3%)
-  #5 choice: 9 people (12.5%)
+  #1 choice: 41 people (62.1%)
+  #2 choice: 4 people (6.1%)
+  #3 choice: 8 people (12.1%)
+  #4 choice: 3 people (4.5%)
+  #5 choice: 10 people (15.2%)
 
-Average ranking per person: 2.19
-Total aggregate score: 158
+Average ranking per person: 2.05
+Total aggregate score: 135
 
-Assignments Needing Attention (6 team(s)):
-  - Align: max rank #5, avg 4.50, rankings [4, 5, 5, 4, 4, 5]
-  - TicketSpy: max rank #5, avg 4.33, rankings [5, 3, 5, 5, 3, 5]
-  - MealQuest: max rank #5, avg 3.00, rankings [5, 2, 5, 2, 2, 2]
-  - Fakeify: max rank #4, avg 3.60, rankings [4, 4, 2, 4, 4]
-  - InternTrack: max rank #4, avg 3.20, rankings [3, 3, 4, 3, 3]
+Assignments Needing Attention (4 team(s)):
+  - Spotify Showdown: max rank #5, avg 4.60, rankings [5, 5, 5, 5, 3]
+  - TicketSpy: max rank #5, avg 4.33, rankings [5, 3, 3, 5, 5, 5]
+  - MealQuest: max rank #5, avg 3.00, rankings [2, 2, 2, 5, 5, 2]
+  - CrossWars: max rank #4, avg 2.50, rankings [1, 4, 4, 1, 1, 4]
 
 Optimality Status:
   ✓ All teams assigned to their best possible project
@@ -77,79 +73,73 @@ Unknown netIDs may indicate students not in the dataset.
 TEAM ASSIGNMENTS
 ----------------------------------------------------------------------
 
-Team 1: Align
-  Members (6): abigam8, ahanaroy, aryan08, ayamouse, dmj65432, smoshe
-  Aggregate score: 27
-  Individual rankings: [4, 5, 5, 4, 4, 5]
-  Average per person: 4.50
-
-Team 2: Ambira
+Team 1: Ambira
   Members (6): donovan8, hgram007, ntsegai2, oconnorr, sluong05, timmh7
   Aggregate score: 6
   Individual rankings: [1, 1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 3: CrossWars
+Team 2: CrossWars
   Members (6): akpettis, dmaddo, fpazaran, gcarls4, jacqub3, jhuynh18
   Aggregate score: 15
-  Individual rankings: [4, 1, 4, 4, 1, 1]
+  Individual rankings: [1, 4, 4, 1, 1, 4]
   Average per person: 2.50
 
-Team 4: Fakeify
-  Members (5): admcrae, avanunes, jtkent, lillinn, zcrouse
-  Aggregate score: 18
-  Individual rankings: [4, 4, 2, 4, 4]
-  Average per person: 3.60
-
-Team 5: GitStory
+Team 3: GitStory
   Members (5): adgarg12, dchiem, imlimasi, sliu1229, vinamra1
   Aggregate score: 5
   Individual rankings: [1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 6: GoBuddy
+Team 4: GoBuddy
   Members (6): aaryaj, jinkehan, luam, rayxr, sjn0305, tingyu01
   Aggregate score: 6
   Individual rankings: [1, 1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 7: Homi
+Team 5: Homi
   Members (5): conthi, eelmi2, husabdi, ptang6, zsabry
   Aggregate score: 5
   Individual rankings: [1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 8: InternTrack
-  Members (5): erathi, john35, mas954, mmahamed, yasirab
-  Aggregate score: 16
-  Individual rankings: [3, 3, 4, 3, 3]
-  Average per person: 3.20
-
-Team 9: MealQuest
-  Members (6): alew4, chiemily, jpark132, rpham03, wadswbri, yanam5
-  Aggregate score: 18
-  Individual rankings: [5, 2, 5, 2, 2, 2]
+Team 6: InternTrack
+  Members (5): aryan08, john35, mas954, mmahamed, yasirab
+  Aggregate score: 15
+  Individual rankings: [3, 3, 3, 3, 3]
   Average per person: 3.00
 
-Team 10: ShelterLink
+Team 7: MealQuest
+  Members (6): alew4, chiemily, jpark132, rpham03, wadswbri, yanam5
+  Aggregate score: 18
+  Individual rankings: [2, 2, 2, 5, 5, 2]
+  Average per person: 3.00
+
+Team 8: ShelterLink
   Members (5): amarto, azitab, cbither, elijoshi, spenj
   Aggregate score: 5
   Individual rankings: [1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 11: TicketSpy
+Team 9: Spotify Showdown
+  Members (5): admcrae, avanunes, lillinn, lizhao, zcrouse
+  Aggregate score: 23
+  Individual rankings: [5, 5, 5, 5, 3]
+  Average per person: 4.60
+
+Team 10: TicketSpy
   Members (6): hsu01, lmswar, nbphucc, xllegion, xuannhu, xz265
   Aggregate score: 26
-  Individual rankings: [5, 3, 5, 5, 3, 5]
+  Individual rankings: [5, 3, 3, 5, 5, 5]
   Average per person: 4.33
 
-Team 12: Wearabouts
+Team 11: Wearabouts
   Members (6): ashastry, emilysl, leeaj23, lparab, ninaucht, priyam3
   Aggregate score: 6
   Individual rankings: [1, 1, 1, 1, 1, 1]
   Average per person: 1.00
 
-Team 13: WebAmp
+Team 12: WebAmp
   Members (5): cyw12, ecjohn80, jc011605, longvu, zzzahara
   Aggregate score: 5
   Individual rankings: [1, 1, 1, 1, 1]
@@ -158,24 +148,30 @@ Team 13: WebAmp
 ======================================================================
 UNMATCHED STUDENTS
 ======================================================================
-Total unmatched: 15 student(s)
+Total unmatched: 21 student(s)
 
 List of unmatched students:
   1. Pfg1995
-  2. dmaring
-  3. dpetkau
-  4. harrycn
-  5. junhez
-  6. kiann2
-  7. lberna
-  8. lizhao
-  9. nushas
-  10. shaank22
-  11. shelb2
-  12. timofeik
-  13. tomaszmi
-  14. vishksat
-  15. zliu44
+  2. abigam8
+  3. ahanaroy
+  4. ayamouse
+  5. dmaring
+  6. dmj65432
+  7. dpetkau
+  8. erathi
+  9. harrycn
+  10. jtkent
+  11. junhez
+  12. kiann2
+  13. lberna
+  14. nushas
+  15. shaank22
+  16. shelb2
+  17. smoshe
+  18. timofeik
+  19. tomaszmi
+  20. vishksat
+  21. zliu44
 
 Note: These students could not be placed in teams of 5-6 with
 compatible project preferences (projects in everyone's top 5).

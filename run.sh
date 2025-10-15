@@ -4,7 +4,16 @@
 
 set -e  # Exit on error
 
-echo "=== Team Formation System Setup ==="
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo "======================================================================="
+echo "Team Formation System - Setup and Run"
+echo "======================================================================="
+echo ""
 
 # Check if Python 3 is installed
 if ! command -v python3 &> /dev/null; then
@@ -38,34 +47,75 @@ else
 fi
 
 # Install pandas
-echo "Installing pandas..."
-pip3 install pandas 2>/dev/null || pip3 install --break-system-packages pandas
+echo "Step 1: Installing dependencies..."
+if pip3 list 2>/dev/null | grep -q pandas; then
+    echo "  ✓ pandas already installed"
+else
+    echo "  Installing pandas..."
+    pip3 install pandas 2>/dev/null || pip3 install --break-system-packages pandas
+    if [ $? -eq 0 ]; then
+        echo "  ✓ pandas installed successfully"
+    else
+        echo -e "${RED}✗ Failed to install pandas${NC}"
+        exit 1
+    fi
+fi
 
 echo ""
-echo "=== Running Team Formation System Tests ==="
+echo "======================================================================="
+echo "Step 2: Running Validation Tests"
+echo "======================================================================="
 echo ""
 
 # Run tests first
 python3 team_formation.py --test cse403-preferences.csv
 
 if [ $? -ne 0 ]; then
-    echo "Tests failed! Please fix issues before proceeding."
+    echo -e "${RED}✗ Tests failed! Please fix issues before proceeding.${NC}"
     exit 1
 fi
 
+echo -e "${GREEN}✓ All tests passed!${NC}"
+
 echo ""
-echo "=== Running Team Formation System ==="
+echo "======================================================================="
+echo "Step 3: Running Team Formation"
+echo "======================================================================="
 echo ""
 
 # Run the Python script
 python3 team_formation.py cse403-preferences.csv out.csv
 
+# Check if output was created
+if [ ! -f out.csv ]; then
+    echo -e "${RED}✗ Error: Output file 'out.csv' was not created${NC}"
+    exit 1
+fi
+
+if [ ! -f report.txt ]; then
+    echo -e "${YELLOW}⚠ Warning: Report file 'report.txt' was not created${NC}"
+fi
+
 echo ""
-echo "=== Done ==="
+echo "======================================================================="
+echo "COMPLETED SUCCESSFULLY"
+echo "======================================================================="
 echo ""
 echo "Output files generated:"
-echo "  - out.csv (team assignments)"
-echo "  - report.txt (detailed summary)"
-echo "  - team_formation.log (processing log)"
+if [ -f out.csv ]; then
+    team_count=$(wc -l < out.csv)
+    echo -e "  ${GREEN}✓${NC} out.csv (team assignments) - $team_count team(s)"
+fi
+if [ -f report.txt ]; then
+    echo -e "  ${GREEN}✓${NC} report.txt (detailed summary)"
+fi
+if [ -f team_formation.log ]; then
+    echo -e "  ${GREEN}✓${NC} team_formation.log (processing log)"
+fi
+echo ""
+echo "To view results:"
+echo "  cat out.csv           # View team assignments"
+echo "  cat report.txt        # View detailed report"
+echo "  cat team_formation.log # View processing log"
 echo ""
 

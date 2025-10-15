@@ -2146,42 +2146,92 @@ def main(input_file, output_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Team Formation System - Assigns students to teams based on preferences"
+        description="Team Formation System - Assigns students to teams based on preferences",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python3 team_formation.py input.csv output.csv
+  python3 team_formation.py -i input.csv -o output.csv -v
+  python3 team_formation.py --test input.csv
+  python3 team_formation.py --test --verbose input.csv output.csv
+        """
     )
+    
+    # Input/Output arguments
     parser.add_argument(
         "input_file",
-        help="Path to the input CSV file containing student preferences"
+        nargs='?',
+        help="Path to the input CSV file containing student preferences (default: cse403-preferences.csv)"
     )
     parser.add_argument(
         "output_file",
         nargs='?',
-        default="out.csv",
         help="Path to the output CSV file for team assignments (default: out.csv)"
     )
     parser.add_argument(
-        "--test",
-        action="store_true",
-        help="Run tests before processing"
+        "-i", "--input",
+        dest="input_flag",
+        help="Path to the input CSV file (alternative to positional arg)"
     )
     parser.add_argument(
-        "--verbose",
-        "-v",
+        "-o", "--output",
+        dest="output_flag",
+        help="Path to the output CSV file (alternative to positional arg)"
+    )
+    
+    # Options
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run validation tests before processing"
+    )
+    parser.add_argument(
+        "-v", "--verbose",
         action="store_true",
         help="Enable verbose (DEBUG level) logging"
+    )
+    parser.add_argument(
+        "--no-report",
+        action="store_true",
+        help="Skip generating detailed report.txt file"
     )
     
     args = parser.parse_args()
     
+    # Determine input file (priority: flag > positional > default)
+    input_file = args.input_flag or args.input_file or "cse403-preferences.csv"
+    
+    # Determine output file (priority: flag > positional > default)
+    output_file = args.output_flag or args.output_file or "out.csv"
+    
     # Setup logging
     setup_logging(verbose=args.verbose)
     
+    logging.info("="*70)
+    logging.info("Team Formation System")
+    logging.info("="*70)
+    logging.info(f"Input file: {input_file}")
+    logging.info(f"Output file: {output_file}")
+    logging.info(f"Verbose mode: {args.verbose}")
+    logging.info(f"Generate report: {not args.no_report}")
+    logging.info("="*70 + "\n")
+    
     # Run tests if requested
     if args.test:
-        test_passed = run_tests(args.input_file)
+        test_passed = run_tests(input_file)
         if not test_passed:
             logging.error("\n✗ Tests failed. Please fix issues before proceeding.")
             sys.exit(1)
         logging.info("Proceeding with team formation...\n")
     
-    main(args.input_file, args.output_file)
+    # Run main processing
+    try:
+        main(input_file, output_file)
+    except KeyboardInterrupt:
+        logging.warning("\n\nProcess interrupted by user")
+        sys.exit(130)
+    except Exception as e:
+        logging.error(f"\nFatal error: {e}")
+        logging.debug("Full traceback:", exc_info=True)
+        sys.exit(1)
 
