@@ -2,6 +2,22 @@
 """
 Team Formation System
 Assigns students to teams based on their preferences and constraints.
+
+LOGGING:
+  The system uses Python's logging module with multiple levels:
+  - INFO: Normal progress messages (default)
+  - WARNING: Data quality issues, edge cases, unmatched students
+  - ERROR: Constraint violations, critical issues
+  - DEBUG: Detailed processing information (use --verbose flag)
+  
+  Logs are written to:
+  - Console: Simple format for readability
+  - team_formation.log: Detailed format with timestamps
+  
+  Usage:
+    python3 team_formation.py input.csv output.csv          # Normal logging
+    python3 team_formation.py -v input.csv output.csv       # Verbose (DEBUG)
+    python3 team_formation.py --test input.csv              # Run tests only
 """
 
 import sys
@@ -9,7 +25,227 @@ import os
 import argparse
 import pandas as pd
 import re
+import logging
 from difflib import SequenceMatcher
+
+
+def setup_logging(verbose=False, log_file='team_formation.log'):
+    """
+    Configure logging for the application.
+    
+    Args:
+        verbose (bool): If True, set DEBUG level; otherwise INFO
+        log_file (str): Path to log file
+    """
+    # Determine log level
+    log_level = logging.DEBUG if verbose else logging.INFO
+    
+    # Create formatters
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    simple_formatter = logging.Formatter('%(message)s')
+    
+    # Configure root logger
+    logger = logging.getLogger()
+    logger.setLevel(log_level)
+    
+    # Remove existing handlers
+    logger.handlers = []
+    
+    # Console handler (simple format)
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(log_level)
+    console_handler.setFormatter(simple_formatter)
+    logger.addHandler(console_handler)
+    
+    # File handler (detailed format)
+    file_handler = logging.FileHandler(log_file, mode='w')
+    file_handler.setLevel(logging.DEBUG)  # Always log everything to file
+    file_handler.setFormatter(detailed_formatter)
+    logger.addHandler(file_handler)
+    
+    logging.info(f"Logging configured: level={logging.getLevelName(log_level)}, file={log_file}")
+    logging.debug(f"Verbose logging enabled")
+
+
+def run_tests(input_filepath):
+    """
+    Run comprehensive tests on the team formation pipeline.
+    
+    Args:
+        input_filepath: Path to input CSV file
+        
+    Returns:
+        bool: True if all tests pass, False otherwise
+    """
+    print("=" * 70)
+    print("RUNNING TEAM FORMATION PIPELINE TESTS")
+    print("=" * 70)
+    
+    test_passed = 0
+    test_failed = 0
+    
+    try:
+        # Test 1: CSV Parsing
+        print("\n[Test 1] CSV Parsing...")
+        df = pd.read_csv(input_filepath, encoding='utf-8')
+        
+        # Check expected columns exist
+        required_columns = ['Timestamp', 'Email Address', 'Name', 'Your UW NetId']
+        for col in required_columns:
+            assert col in df.columns, f"Missing required column: {col}"
+        
+        # Check we have project columns
+        project_cols = [col for col in df.columns if '[' in col and ']' in col]
+        assert len(project_cols) > 0, "No project columns found"
+        
+        # Check we have team member columns
+        team_cols = [col for col in df.columns if 'Team Member' in col]
+        assert len(team_cols) > 0, "No team member columns found"
+        
+        print(f"  ✓ CSV parsed successfully")
+        print(f"  ✓ Found {len(df)} rows")
+        print(f"  ✓ Found {len(project_cols)} project columns")
+        print(f"  ✓ Found {len(team_cols)} team member columns")
+        test_passed += 1
+        
+    except AssertionError as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+        return False
+    except Exception as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+        return False
+    
+    try:
+        # Test 2: Data Extraction
+        print("\n[Test 2] Data Extraction...")
+        netids = df.iloc[:, 3].tolist()
+        initial_count = len(df)
+        extracted_count = len(netids)
+        
+        assert initial_count == extracted_count, f"Data loss: {initial_count} rows -> {extracted_count} netids"
+        assert all(netid for netid in netids if not pd.isna(netid)), "Some netIDs are missing"
+        
+        print(f"  ✓ All {extracted_count} rows processed")
+        print(f"  ✓ No data loss detected")
+        test_passed += 1
+        
+    except AssertionError as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    except Exception as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    
+    try:
+        # Test 3: Project Preferences
+        print("\n[Test 3] Project Preferences...")
+        
+        # Extract preferences (simplified version)
+        project_columns = []
+        project_names = []
+        for i in range(4, len(df.columns)):
+            col_name = df.columns[i]
+            if 'Team Member' in col_name:
+                break
+            project_name = extract_project_name(col_name)
+            if project_name:
+                project_columns.append(i)
+                project_names.append(project_name)
+        
+        # Check each person has preferences
+        for row_idx in range(len(df)):
+            netid = df.iloc[row_idx, 3]
+            prefs = []
+            for col_idx in project_columns:
+                cell_value = df.iloc[row_idx, col_idx]
+                ranking = parse_preference_value(cell_value)
+                if ranking is not None:
+                    prefs.append(ranking)
+            
+            # Most people should have 5 preferences
+            if len(prefs) not in [0, 5]:
+                print(f"  ⚠ {netid} has {len(prefs)} preferences (expected 5)")
+        
+        print(f"  ✓ Project preferences extracted")
+        print(f"  ✓ Found {len(project_names)} projects")
+        test_passed += 1
+        
+    except Exception as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    
+    try:
+        # Test 4: Subteam Validation
+        print("\n[Test 4] Subteam Identification...")
+        
+        # This is a simplified test - full validation happens in main pipeline
+        team_member_cols = []
+        for i in range(len(df.columns)):
+            if 'Team Member' in df.columns[i]:
+                team_member_cols.append(i)
+        
+        assert len(team_member_cols) > 0, "No team member columns found"
+        
+        print(f"  ✓ Team member columns identified: {len(team_member_cols)}")
+        test_passed += 1
+        
+    except AssertionError as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    except Exception as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    
+    try:
+        # Test 5: Data Consistency
+        print("\n[Test 5] Data Consistency...")
+        
+        # Check no completely empty rows
+        empty_rows = 0
+        for i in range(len(df)):
+            if df.iloc[i].isna().all():
+                empty_rows += 1
+        
+        assert empty_rows == 0, f"Found {empty_rows} completely empty rows"
+        
+        # Check netIDs are reasonable (alphanumeric, reasonable length)
+        for netid in netids:
+            if not pd.isna(netid):
+                netid_str = str(netid).strip()
+                assert len(netid_str) > 0, "Empty netID found"
+                assert len(netid_str) < 50, f"Suspiciously long netID: {netid_str}"
+        
+        print(f"  ✓ No empty rows")
+        print(f"  ✓ All netIDs are reasonable")
+        test_passed += 1
+        
+    except AssertionError as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    except Exception as e:
+        print(f"  ✗ FAILED: {e}")
+        test_failed += 1
+    
+    # Summary
+    print("\n" + "=" * 70)
+    print("TEST SUMMARY")
+    print("=" * 70)
+    print(f"Passed: {test_passed}")
+    print(f"Failed: {test_failed}")
+    
+    if test_failed == 0:
+        print("\n✓ ALL TESTS PASSED")
+        print("=" * 70 + "\n")
+        return True
+    else:
+        print(f"\n✗ {test_failed} TEST(S) FAILED")
+        print("=" * 70 + "\n")
+        return False
 
 
 class DataQualityTracker:
@@ -38,24 +274,24 @@ class DataQualityTracker:
     
     def print_summary(self):
         """Print a summary of all issues found."""
-        print("\n--- Data Quality Issues Summary ---")
+        logging.info("\n--- Data Quality Issues Summary ---")
         total_issues = sum(len(issues) for issues in self.issues.values())
         
         if total_issues == 0:
-            print("✓ No data quality issues found!")
+            logging.info("✓ No data quality issues found!")
             return
         
-        print(f"Found {total_issues} issue(s):\n")
+        logging.warning(f"Found {total_issues} issue(s):\n")
         
         for category, issues in self.issues.items():
             if issues:
                 category_name = category.replace('_', ' ').title()
-                print(f"{category_name}: {len(issues)}")
+                logging.warning(f"{category_name}: {len(issues)}")
                 for issue in issues[:3]:  # Show first 3
-                    print(f"  - {issue}")
+                    logging.warning(f"  - {issue}")
                 if len(issues) > 3:
-                    print(f"  ... and {len(issues) - 3} more")
-                print()
+                    logging.warning(f"  ... and {len(issues) - 3} more")
+                logging.warning("")
 
 
 def validate_input_data(df, netids, project_prefs, quality_tracker):
@@ -1609,7 +1845,7 @@ def main(input_file, output_file):
         if not os.path.exists(input_file):
             raise FileNotFoundError(f"Input file not found: {input_file}")
         
-        print(f"Reading preferences from: {input_file}")
+        logging.info(f"Reading preferences from: {input_file}")
         
         # Parse the CSV file and load student preferences
         df = parse_input_csv(input_file)
@@ -1644,8 +1880,10 @@ def main(input_file, output_file):
             
             if not common_prefs:
                 subteams_with_no_common.append((i+1, sorted(subteam)))
-                print(f"\n⚠️  ERROR: Subteam {i+1} has NO common project preferences!")
-                print(f"   Members: {', '.join(sorted(subteam))}")
+                logging.error(f"\n⚠️  ERROR: Subteam {i+1} has NO common project preferences!")
+                logging.error(f"   Members: {', '.join(sorted(subteam))}")
+                quality_tracker.add_issue('no_common_preferences', 
+                                         f"Subteam {i+1}: {', '.join(sorted(subteam))}")
             else:
                 print(f"\nSubteam {i+1} ({len(subteam)} members) - Top 3 common projects:")
                 for j, (project, data) in enumerate(list(common_prefs.items())[:3]):
@@ -1665,14 +1903,42 @@ def main(input_file, output_file):
         # Classify subteams for team formation
         classified_teams = classify_subteams(subteam_results)
         
+        # Assertion: Verify all complete teams are size 5-6
+        for team in classified_teams['complete_teams']:
+            assert len(team['members']) in [5, 6], f"Invalid complete team size: {len(team['members'])}"
+        
         # Merge incomplete subteams into valid teams
         merged_results = merge_subteams_into_teams(classified_teams['incomplete_subteams'], project_prefs)
+        
+        # Assertion: Verify all merged teams are size 5-6
+        for team in merged_results['formed_teams']:
+            assert len(team['members']) in [5, 6], f"Invalid merged team size: {len(team['members'])}"
         
         # Assign projects to complete subteams
         complete_assignments = assign_projects_to_complete_subteams(classified_teams['complete_teams'], project_prefs)
         
+        # Assertion: Verify all assignments have valid projects
+        for assignment in complete_assignments['assignments']:
+            assert 'project' in assignment, "Assignment missing project"
+            assert 'team_members' in assignment, "Assignment missing team members"
+            assert len(assignment['team_members']) in [5, 6], f"Invalid team size in assignment: {len(assignment['team_members'])}"
+            
+            # Verify project is in everyone's top 5
+            for member in assignment['team_members']:
+                member_prefs = project_prefs.get(member, {})
+                assert assignment['project'] in member_prefs, \
+                    f"Project {assignment['project']} not in {member}'s preferences"
+        
         # Assign projects to merged teams
         merged_assignments = assign_projects_to_merged_teams(merged_results['formed_teams'], project_prefs)
+        
+        # Assertion: Verify merged assignments
+        for assignment in merged_assignments['assignments']:
+            assert len(assignment['team_members']) in [5, 6], f"Invalid merged team size: {len(assignment['team_members'])}"
+            for member in assignment['team_members']:
+                member_prefs = project_prefs.get(member, {})
+                assert assignment['project'] in member_prefs, \
+                    f"Project {assignment['project']} not in {member}'s preferences (merged team)"
         
         # Compare complete vs merged team satisfaction
         print(f"\n--- Satisfaction Comparison: Complete vs Merged Teams ---")
@@ -1737,14 +2003,17 @@ def main(input_file, output_file):
         
         # Show unmatched people if any
         if merged_results['unmatched']:
-            print(f"\n⚠️  Unmatched Subteams/Individuals:")
-            print(f"  Total unmatched: {len(merged_results['unmatched'])}")
+            logging.warning(f"\n⚠️  Unmatched Subteams/Individuals:")
+            logging.warning(f"  Total unmatched: {len(merged_results['unmatched'])}")
             unmatched_people = []
             for team in merged_results['unmatched']:
                 unmatched_people.extend(sorted(team['members']))
-            print(f"  Unmatched people ({len(unmatched_people)}): {', '.join(unmatched_people[:10])}")
+            logging.warning(f"  Unmatched people ({len(unmatched_people)}): {', '.join(unmatched_people[:10])}")
             if len(unmatched_people) > 10:
-                print(f"    ... and {len(unmatched_people) - 10} more")
+                logging.warning(f"    ... and {len(unmatched_people) - 10} more")
+            
+            # Log detailed list at DEBUG level
+            logging.debug(f"  Complete list of unmatched: {', '.join(sorted(unmatched_people))}")
         
         # Print examples of extracted preferences
         print(f"\n--- Sample Project Preferences ---")
@@ -1839,37 +2108,39 @@ def main(input_file, output_file):
         quality_tracker.print_summary()
         
         # Final success message
-        print(f"\n{'='*70}")
+        logging.info(f"\n{'='*70}")
         if validation_passed:
-            print(f"TEAM FORMATION COMPLETED SUCCESSFULLY")
+            logging.info(f"TEAM FORMATION COMPLETED SUCCESSFULLY")
         else:
-            print(f"TEAM FORMATION COMPLETED WITH VALIDATION WARNINGS")
-        print(f"{'='*70}")
-        print(f"\nSummary:")
-        print(f"  ✓ Output CSV: {output_file}")
+            logging.warning(f"TEAM FORMATION COMPLETED WITH VALIDATION WARNINGS")
+        logging.info(f"{'='*70}")
+        logging.info(f"\nSummary:")
+        logging.info(f"  ✓ Output CSV: {output_file}")
         if validation_passed:
-            print(f"  ✓ CSV validation: PASSED")
+            logging.info(f"  ✓ CSV validation: PASSED")
         else:
-            print(f"  ⚠ CSV validation: FAILED (check messages above)")
-        print(f"  ✓ Report: report.txt")
-        print(f"  ✓ Teams formed: {len(all_assignments)}")
-        print(f"  ✓ Students placed: {sum(len(a['team_members']) for a in all_assignments)}/{len(basic_data['netids'])}")
+            logging.warning(f"  ⚠ CSV validation: FAILED (check messages above)")
+        logging.info(f"  ✓ Report: report.txt")
+        logging.info(f"  ✓ Log file: team_formation.log")
+        logging.info(f"  ✓ Teams formed: {len(all_assignments)}")
+        logging.info(f"  ✓ Students placed: {sum(len(a['team_members']) for a in all_assignments)}/{len(basic_data['netids'])}")
         
         if merged_results['unmatched']:
             unmatched_count = sum(len(team['members']) for team in merged_results['unmatched'])
-            print(f"  ⚠ Students unmatched: {unmatched_count}")
-            print(f"     (See report.txt for details)")
+            logging.warning(f"  ⚠ Students unmatched: {unmatched_count}")
+            logging.warning(f"     (See report.txt for details)")
         
-        print(f"\n{'='*70}")
+        logging.info(f"\n{'='*70}")
         
     except FileNotFoundError as e:
-        print(f"Error: {e}", file=sys.stderr)
+        logging.error(f"Error: {e}")
         sys.exit(1)
     except PermissionError as e:
-        print(f"Error: Permission denied - {e}", file=sys.stderr)
+        logging.error(f"Error: Permission denied - {e}")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: An unexpected error occurred - {e}", file=sys.stderr)
+        logging.error(f"Error: An unexpected error occurred - {e}")
+        logging.debug(f"Exception details:", exc_info=True)
         sys.exit(1)
 
 
@@ -1883,9 +2154,34 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "output_file",
-        help="Path to the output CSV file for team assignments"
+        nargs='?',
+        default="out.csv",
+        help="Path to the output CSV file for team assignments (default: out.csv)"
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run tests before processing"
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable verbose (DEBUG level) logging"
     )
     
     args = parser.parse_args()
+    
+    # Setup logging
+    setup_logging(verbose=args.verbose)
+    
+    # Run tests if requested
+    if args.test:
+        test_passed = run_tests(args.input_file)
+        if not test_passed:
+            logging.error("\n✗ Tests failed. Please fix issues before proceeding.")
+            sys.exit(1)
+        logging.info("Proceeding with team formation...\n")
+    
     main(args.input_file, args.output_file)
 

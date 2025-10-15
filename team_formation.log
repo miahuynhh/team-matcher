@@ -1,0 +1,46 @@
+2025-10-14 22:05:06 - INFO - Logging configured: level=DEBUG, file=team_formation.log
+2025-10-14 22:05:06 - DEBUG - Verbose logging enabled
+2025-10-14 22:05:06 - INFO - Reading preferences from: cse403-preferences.csv
+2025-10-14 22:05:06 - WARNING - 
+⚠️  Unmatched Subteams/Individuals:
+2025-10-14 22:05:06 - WARNING -   Total unmatched: 15
+2025-10-14 22:05:06 - WARNING -   Unmatched people (15): nushas, vishksat, tomaszmi, zliu44, timofeik, shaank22, kiann2, shelb2, junhez, harrycn
+2025-10-14 22:05:06 - WARNING -     ... and 5 more
+2025-10-14 22:05:06 - DEBUG -   Complete list of unmatched: Pfg1995, dmaring, dpetkau, harrycn, junhez, kiann2, lberna, lizhao, nushas, shaank22, shelb2, timofeik, tomaszmi, vishksat, zliu44
+2025-10-14 22:05:06 - INFO - 
+--- Data Quality Issues Summary ---
+2025-10-14 22:05:06 - WARNING - Found 21 issue(s):
+
+2025-10-14 22:05:06 - WARNING - Unknown Netids In Subteams: 6
+2025-10-14 22:05:06 - WARNING -   - lizhao: team member 'mayaoden' not found in student list
+2025-10-14 22:05:06 - WARNING -   - junhez: team member 'mayaoden' not found in student list
+2025-10-14 22:05:06 - WARNING -   - shelb2: team member 'mayaoden' not found in student list
+2025-10-14 22:05:06 - WARNING -   ... and 3 more
+2025-10-14 22:05:06 - WARNING - 
+2025-10-14 22:05:06 - WARNING - Fuzzy Matched Netids: 12
+2025-10-14 22:05:06 - WARNING -   - shaank22: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+2025-10-14 22:05:06 - WARNING -   - smoshe: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+2025-10-14 22:05:06 - WARNING -   - aryan08: 'pfg1995' fuzzy matched to 'Pfg1995' (score: 1.00)
+2025-10-14 22:05:06 - WARNING -   ... and 9 more
+2025-10-14 22:05:06 - WARNING - 
+2025-10-14 22:05:06 - WARNING - Case Normalization: 3
+2025-10-14 22:05:06 - WARNING -   - dchiem: team member 'Adgarg12' normalized to 'adgarg12'
+2025-10-14 22:05:06 - WARNING -   - gcarls4: team member 'Jhuynh18' normalized to 'jhuynh18'
+2025-10-14 22:05:06 - WARNING -   - imlimasi: team member 'Adgarg12' normalized to 'adgarg12'
+2025-10-14 22:05:06 - WARNING - 
+2025-10-14 22:05:06 - INFO - 
+======================================================================
+2025-10-14 22:05:06 - INFO - TEAM FORMATION COMPLETED SUCCESSFULLY
+2025-10-14 22:05:06 - INFO - ======================================================================
+2025-10-14 22:05:06 - INFO - 
+Summary:
+2025-10-14 22:05:06 - INFO -   ✓ Output CSV: out.csv
+2025-10-14 22:05:06 - INFO -   ✓ CSV validation: PASSED
+2025-10-14 22:05:06 - INFO -   ✓ Report: report.txt
+2025-10-14 22:05:06 - INFO -   ✓ Log file: team_formation.log
+2025-10-14 22:05:06 - INFO -   ✓ Teams formed: 13
+2025-10-14 22:05:06 - INFO -   ✓ Students placed: 72/87
+2025-10-14 22:05:06 - WARNING -   ⚠ Students unmatched: 15
+2025-10-14 22:05:06 - WARNING -      (See report.txt for details)
+2025-10-14 22:05:06 - INFO - 
+======================================================================

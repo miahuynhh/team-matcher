@@ -42,6 +42,18 @@ echo "Installing pandas..."
 pip3 install pandas 2>/dev/null || pip3 install --break-system-packages pandas
 
 echo ""
+echo "=== Running Team Formation System Tests ==="
+echo ""
+
+# Run tests first
+python3 team_formation.py --test cse403-preferences.csv
+
+if [ $? -ne 0 ]; then
+    echo "Tests failed! Please fix issues before proceeding."
+    exit 1
+fi
+
+echo ""
 echo "=== Running Team Formation System ==="
 echo ""
 
@@ -50,4 +62,10 @@ python3 team_formation.py cse403-preferences.csv out.csv
 
 echo ""
 echo "=== Done ==="
+echo ""
+echo "Output files generated:"
+echo "  - out.csv (team assignments)"
+echo "  - report.txt (detailed summary)"
+echo "  - team_formation.log (processing log)"
+echo ""
 
